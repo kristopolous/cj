@@ -9,242 +9,66 @@
  * 	Jquery
  */
 
-String.prototype.trim = function() {
-	return this.replace(/^\s*/g, "")
-}
-Number.prototype.padLeft = function(m){
-	return (this + Math.pow(10, m)).toString().substr(1);
-}
 
-var $cj = {
-	safeCall: function () {
-		var cback = {};
+var $cj = {};
 
-		return function () {
-			var args = Array.prototype.slice.call(arguments),
-			    timeout = 10;
-
-			if(args.length > 0) {
-				if(cback[args[0]]) {
-					return cback[args.shift()](args);
-				} else {
-					var ival = setInterval(function () {
-						if(cback[args[0]]) {
-							clearInterval(ival);
-							return cback[args.shift()](args);
-						} else {
-							timeout--;
-
-							if(timeout == 0) {
-								alert('giving up');
-								clearInterval(ival);
-							}
-						}
-					}, 100);
-				}
-			}	
-
-			return cback;
-		}
-	},
-
-	semaphore: (function(){
-		var 	pub = {},
-			semSet = {},
-			semFunc = {},
-			cbList = {};
-
-		pub.$set = function(name) {
-			var cbTmp, cb;
-			if(cbList.hasOwnProperty(name)) {
-				cbTmp = cbList[name];
-				while(cb = cbTmp.shift()) {
-					cb();
-				}
-			}
-
-			semSet[name] = true;
-		}
-
-		pub.$waitOn = function(name, cb) {
-			if(semSet[name]) {
-				return cb();
-			} else if(!cbList.hasOwnProperty(name)) {
-				cbList[name] = [];
-			}
-
-			cbList[name].push(cb);
-
-			// check to see if a helper function has
-			// been registered for this name
-			if(semFunc.hasOwnProperty(name)) {
-				semFunc[name]();
-			}
-		}
-
-		pub.$setFunction = function(name, cb) {
-			semFunc[name] = cb;
-		}
-
-		return pub;
-	})(),
-
-	waitOn: function(toEval, cb) {
-		var ival = setInterval(function(){
-			var tmp;
-			eval ('tmp = ' + toEval);
-
-			if(typeof tmp !== 'undefined' && tmp != null) {
-				clearInterval(ival);
-				cb();
-			}
-		}, 100);
-	},
-
-	// return time in a format
-	// fmt is of type
-	// 	%[Y|M|N|D|W|H|h|m|s]
-	// 		Y = year, such as 2010
-	// 		N = Named month, such as Feb
-	// 		M = month, such 02
-	// 		W = Week day, such as Tue
-	// 		D = Day, such as 24
-	// 		H = hour base 12
-	// 		h = hour
-	// 		m = minute
-	// 		s = second
-
-	time: function (fmt) {
-		var d = new Date(),
-		    t = {
-			Y: d.getFullYear(),
-			M: (d.getMonth() + 1).padLeft(2),
-			D: d.getDate().padLeft(2),
-			H: ( ((d.getHours() + 1) % 12) - 1),
-			h: d.getHours().padLeft(2),
-			m: d.getMinutes().padLeft(2),
-			s: d.getSeconds().padLeft(2)
-		}, post = '';
-
-		if(!fmt) {
-			fmt = "%Y-%M-%D %h:%m:%s";
-		}
-
-		return fmt.replace(/%(.)/g, function(f, m) {
-			if(m == 'H') {
-				post = [' AM', ' PM'][Math.floor(t.h / 12)];
-			}
-			return t[m];
-		}) + post;
-	},
-
-	//
-	// goes to parent nodes until the attr is defined
-	// 
-	bubbleattr: function(start, attr) {
-		var val;
-		
-		do{
-			val = start.getAttribute(attr);
-			if(val !== null) {
-				return val;
-			}
-			start = start.parentNode;
-		} while(start);
-
-		return null;
-	},
-
-	download: (function(){
-		var 	iframe;
-
-		function init(){
-			if(!iframe) {
-				iframe = $("<iframe style=visibility:hidden></iframe");
-				iframe.appendTo(document.body);
-			}
-		}
-
-		return function (url) {
-			init();
-			iframe.attr('src', url);
-		}
-	})(),	
-
-	reload: function(){
-		window.location = window.location.toString();
-	},
-
-	newTab: (function () {
-		var 	form, 
-			input;
-
-		function init() {
-			if(!form) {
-				form = $('<form id=newtab target=_blank method=get></form>');
-				$(document.body).append(form);
-			} 
-		}
-
-		function modify(o) {
-			for(var k in o) {
-				form.append('<input name="' + k + '" value="' + o[k] + '">');
-			}
-		}
-
-		return {
-			setUrl: function (url, o) {
-				init();
-				form.attr('action', url);
-
-				if(o) {
-					modify(o);	
-				}
-			},
-
-			modify: modify,
-
-			magic: function (urlIn) {
-				var 	optList = urlIn.split(/[=?&]/g),
-					ix = 0,
-					url = optList.shift(),
-					opts = {},
-					len = optList.length;
-
-				for(; ix < len; ix +=2 ) {
-					opts[optList[ix]] = optList[ix + 1];
-				}
-
-				$cj.newTab.setUrl(url, opts);
-
-				setTimeout(function () {
-					$lib.newTab.create();
-				},1);
-			},
-
-			create: function () {
-				document.getElementById('newtab').submit();
-			}
-		}
-	})(),
-
-	onEnter: function (div, callback) {
-		$(div).keyup(function (e) {
-			var kc;
-
-			if (window.event) kc = window.event.keyCode;
-			else if (e) kc = e.which;
-			else return true;
-
-			if (kc == K.enter) {
-				callback.apply(this);
-			}
-
-			return true;
-		});
-	},
-
+$cj.async = {
 	callback: function() {
+		/* {{ 
+		 * Description:
+		 * 	A generic callback framework.
+		 *
+		 * Usage:
+		 * 	$cj.callback (directive, function);
+		 * 	$cj.callback.exec (pointer, directive, options);
+		 *
+		 * Details:
+		 * 	directive: Any text value or array of text values
+		 * 	function: A callback associated with the directive
+		 * 	pointer: A context for the callback
+		 * 	options: An array of options to pass to the function
+		 *
+		 * Example:
+		 * 	Say I had 3 dialog boxes, named 'Send Mail',
+		 * 	'Get Account Info', and 'Login'.
+		 * 	
+		 * 	Pretend I wanted to be able to hook an 
+		 * 	event when they close.  Here is
+		 * 	how you would do it.
+		 *
+		 * 	var dialogOnClose = $cj.callback();
+		 *
+		 * 	Then we could do the following:
+		 *
+		 * 	dialogOnClose('Send Mail', function(){
+		 * 		alert("Your mail has been sent");
+		 * 	});
+		 *
+		 * 	Now in my generic function
+		 *
+		 * 	function Dialog(type) {
+		 * 	}
+		 *
+		 * 	which has a generic close
+		 *
+		 * 	Dialog.close = function()
+		 *
+		 * 	I can do this...
+		 *
+		 * 	Dialog.close = function(){
+		 *		$cj.callback.exec(this, type);
+		 *	}
+		 *
+		 * 	and if any callbacks are registered for the 
+		 * 	generic type, then they would run there.
+		 * 	This allows for a rather strong decoupling
+		 * 	of complex code and an ability to isolate
+		 * 	them into an arbitrary event model.
+		 * 	
+		 * See Also:
+		 * 	$cj.ev
+		 * }}
+		 */
 		var cbackMap = {},
 		    ix;
 
@@ -282,10 +106,133 @@ var $cj = {
 
 			return ret;
 		}
+
 		return ret;
 	},
 
-	loadLibrary: (function() {
+	mutex: (function(){
+		/* {{ 
+		 * Description:
+		 * 	A generic named mutex
+		 *
+		 * Usage:
+		 * 	$cj.mutex.set (name)
+		 * 	$cj.mutex.waitOn (name, function)
+		 *
+		 * Details:
+		 * 	name: A mutex name
+		 * 	function: A callback function
+		 *
+		 * Example:
+		 * 	Pretend that you asynchronously load
+		 * 	a json object and have code that depends
+		 * 	on it.
+		 *
+		 * 	We'll use the following names for
+		 * 	this demonstration:
+		 *
+		 * 	vartable: required object
+		 * 	loadjson: asynchronous function that loads vartable
+		 *	dependency: code that requires vartable
+		 *
+		 *	$cj.mutex.waitOn('vartable', dependency);
+		 *
+		 *	function loadjson() {
+		 *		...
+		 *		$cj.mutex.set('vartable');
+		 *		...
+		 *	}
+		 *
+		 *	It is worth noting that this isn't a true mutex
+		 *	since there are actually no locks acquired and
+		 *	you can't unset it.
+		 *
+		 *	However, it is conceptually similar to a mutex in
+		 *	that functions will not execute until the named
+		 *	'mutex' is set.  And then all future functions
+		 *	that are assigned on it will just pass thru
+		 *	and execute without waiting.
+		 *	
+		 *	If you can think of a better name for this construct
+		 *	please contact me.
+		 * }}
+		 */
+		var 	pub = {},
+			mutSet = {},
+			mutFunc = {},
+			cbList = {};
+
+		pub.set = function(name) {
+			var 	cbTmp, 
+				cb;
+
+			if(cbList.hasOwnProperty(name)) {
+				cbTmp = cbList[name];
+
+				while(cb = cbTmp.shift()) {
+					cb();
+				}
+			}
+
+			mutSet[name] = true;
+		}
+
+		pub.waitOn = function(name, cb) {
+			if(mutSet[name]) {
+				return cb();
+			} else if(!cbList.hasOwnProperty(name)) {
+				cbList[name] = [];
+			}
+
+			cbList[name].push(cb);
+
+			// check to see if a helper function has
+			// been registered for this name
+			if(mutFunc.hasOwnProperty(name)) {
+				mutFunc[name]();
+			}
+		}
+
+		return pub;
+	})(),
+
+	lazyLoad: (function() {
+		/* {{ 
+		 * Description:
+		 * 	A clean way to load additional libraries
+		 *
+		 * Usage:
+		 * 	$cj.lazyLoad (filename, function, options);
+		 * 	$cj.lazyLoad.fire (filename);
+		 *
+		 * Details:
+		 * 	filename: A script to load, such as http://hostname/script.js
+		 * 	function: A function that requires this file
+		 * 	options: See Below
+		 *
+		 * Example:
+		 * 	This is similar to the mutex above and should probably
+		 * 	be folded into it eventually.  It was written at a different
+		 *	time, so it duplicates a lot of the code.
+		 *
+		 * 	Pretend that we depend on a large library that is broken up
+		 * 	into many files.  We have ui.js or intl.js for the UI
+		 * 	and internationalization frameworks.  We want to load this
+		 * 	only if they are required.
+		 *
+		 * 	We will use "ui.js" as our example here.  At the bottom of
+		 * 	ui.js we place the following like
+		 *
+		 * 	$cj.lazyLoad.fire('ui.js');
+		 *
+		 * 	to announce that the file is loaded.
+		 *
+		 * 	Then, throughout the code, you can have dependencies such
+		 * 	as
+		 *
+		 * 	$cj.lazyLoad('ui.js', required);
+		 * }}
+		 */
 		var // a wrapper div to hold our script tags
 			wrapper,
 
@@ -412,8 +359,33 @@ var $cj = {
 };
 
 $cj.dom = function(o) {
+	/* {{ 
+	 * Description:
+	 * 	An integrated DOM builder. This is conceptually new
+	 * 	but quite useful
+	 *
+	 * Usage:
+	 * 	$cj.dom.el {}
+	 * 	$cj.dom.build (dom, obj)
+	 * 	(el) $cj.dom.root (type, name, html)
+	 *	(el) $cj.dom.simple (dom, type, name, html) 
+	 *	(el) $cj.dom.ap (dom, type, name, html) 
+	 *	(el) $cj.dom.apTbl (dom, tableName, list) 
+	 *
+	 * Details:
+	 * 	el: The constructed element
+	 * 	dom: The element to attach to
+	 * 	type: The DOM type of the element to contstruct, such as 'span' or 'input'
+	 * 	name: The name of the element to construct, can be null or omitted
+	 * 	html: Text or html to place inside of the element, can be null or omitted
+	 *
+	 * Example:
+	 * 	TODO
+	 * }}
+	 */
 	var pub = {
-		$build: function (el, obj) {
+		el: {},
+		build: function (el, obj) {
 			var 	len = obj.length, 
 				cur, 
 				ret;
@@ -423,30 +395,31 @@ $cj.dom = function(o) {
 
 				if(cur.length > 2) {
 					if(typeof cur[2] == 'string') {
-						ret = pub.$ap(el, cur[0], cur[1], cur[2]);
+						ret = pub.ap(el, cur[0], cur[1], cur[2]);
+
 						if(cur.length > 3) {
 							// recurse for children
 							// the FOURTH argument is the children
-							pub.$build(ret, cur[3]);
+							pub.build(ret, cur[3]);
 						} 
 					} else { // children
-						ret = pub.$ap(el, cur[0], cur[1]);
+						ret = pub.ap(el, cur[0], cur[1]);
 
 						// recurse for children
-						pub.$build(ret, cur[2]);
+						pub.build(ret, cur[2]);
 					}
 				} else {
-					pub.$ap(el, cur[0], cur[1]);
+					pub.ap(el, cur[0], cur[1]);
 				}
 			}
 		},
 
-		$root: function (type, name, html) {
+		root: function (type, name, html) {
 			var tmp = document.createElement(type);
 
 			if(name) {
 				tmp.className = name;
-				this[name] = tmp;
+				this.el[name] = tmp;
 			}
 
 			if(html) {
@@ -456,7 +429,7 @@ $cj.dom = function(o) {
 
 		// this doesn't do the class creation ... it just
 		// creates the object
-		$simple: function (el, type, name, html) {
+		simple: function (el, type, name, html) {
 			var tmp = el.appendChild(document.createElement(type));
 
 			if(name) {
@@ -481,7 +454,7 @@ $cj.dom = function(o) {
 
 					} else if(name) {
 						if(name in scope) {
-							Gdb("build: " + name);
+							alert(name);
 						}
 
 						scope[name] = tmp;
@@ -498,7 +471,7 @@ $cj.dom = function(o) {
 			return tmp;
 		},
 		// this supports scopes...
-		$ap: function (el, type, name, html) {
+		ap: function (el, type, name, html) {
 			var 	tmp = el.appendChild(document.createElement(type)),
 				scope;
 
@@ -509,7 +482,7 @@ $cj.dom = function(o) {
 				// make the class name space separated for CSS ease
 				tmp.className = nameList[nameList.length - 1];
 
-				scope = this;
+				scope = this.el;
 
 				for(;;) {
 					name = nameList.shift();
@@ -526,7 +499,7 @@ $cj.dom = function(o) {
 
 					} else if(name) {
 						if(name in scope) {
-							Gdb("build: " + name);
+							alert(name);
 						}
 
 						scope[name] = tmp;
@@ -543,17 +516,17 @@ $cj.dom = function(o) {
 			return tmp;
 		},
 
-		$apTbl: function (el, tableName, nameList) {
+		apTbl: function (el, tableName, nameList) {
 			var 	tr = document.createElement('tr'),
 				len = nameList.length;
 
-			pub.$ap(el, 'table', tableName);
+			pub.ap(el, 'table', tableName);
 
 			for(var ix = 0; ix < len; ix++) {
-				pub.$ap(tr, 'td', nameList[ix]);
+				pub.ap(tr, 'td', nameList[ix]);
 			}
 
-			pub[tableName].appendChild(tr);
+			pub.el[tableName].appendChild(tr);
 		}
 	}
 
@@ -564,8 +537,20 @@ $cj.dom = function(o) {
 
 // text library
 $cj.txt = {
-	// nice decoding thing that handles UTF8, \' and UTF16
 	utf8: function (d) {
+		/* {{ 
+		 * Description:
+		 * 	Nice decoding thing that handles UTF8, \' and UTF16
+		 *
+		 * Usage:
+		 *	(htmlText) $cj.text.utf8 (slashedText)
+		 *
+		 * Details:
+		 *
+		 * Example:
+		 * 
+		 * }}
+		 */
 		if(!d) {
 			return '';
 		}
@@ -574,17 +559,133 @@ $cj.txt = {
 		return d.replace(/\\([\\'"])/g, '$1');
 	},
 
+	padLeft: function(num, width){
+		/* {{ 
+		 * Description:
+		 *	Pads a number with 0s
+		 *
+		 * Usage:
+		 *	(text) $cj.txt.padLeft(number, width)
+		 *
+		 * Details:
+		 *	text: The outputted text
+		 *	number: The number to pad
+		 *	width: The width of the number
+		 *
+		 * Example:
+		 * 	Oftentimes, you are dealing with formatting
+		 * 	issues where you want to do the following:
+		 *
+		 * 	1.001
+		 * 	1.002
+		 *
+		 * 	etc. But how the math works out, you start emitting
+		 *
+		 * 	1.1
+		 *
+		 * 	for 1.001 and 
+		 *
+		 * 	1.100
+		 *
+		 * 	for actually, 1.1
+		 *
+		 * 	This is of course, because you can't just padleft with zeros.
+		 *	now you can.  Take that and do this
+		 *
+		 *	$cj.text.padLeft(number, 3);
+		 *
+		 *	And you will always get something 3 characters wide.  About Time!
+		 *
+		 * }}
+		 */
+		return (num + Math.pow(10, width)).toString().substr(1);
+	}
+
+	time: function (fmt) {
+		/* {{ 
+		 * Description:
+		 * 	return time in a format
+		 *
+		 * Usage:
+		 *	(text) $cj.txt.time(format)
+		 *
+		 * Details:
+		 *	format: %[Y|M|N|D|W|H|h|m|s]
+		 * 		Y = year, such as 2010
+		 * 		N = Named month, such as Feb
+		 * 		M = month, such 02
+		 * 		W = Week day, such as Tue
+		 * 		D = Day, such as 24
+		 * 		H = hour base 12
+		 * 		h = hour
+		 * 		m = minute
+		 * 		s = second
+		 * Example:
+		 * 	fmt is of type
+		 * 
+		 * }}
+		 */
+		var d = new Date(),
+		    t = {
+			Y: d.getFullYear(),
+			M: $cj.txt.padLeft(d.getMonth() + 1), 2),
+			D: $cj.txt.padLeft(d.getDate(), 2),
+			H: ( ((d.getHours() + 1) % 12) - 1),
+			h: $cj.txt.padLeft(d.getHours(), 2),
+			m: $cj.txt.padLeft(d.getMinutes(), 2),
+			s: $cj.txt.padLeft(d.getSeconds(), 2)
+		}, post = '';
+
+		if(!fmt) {
+			fmt = "%Y-%M-%D %h:%m:%s";
+		}
+
+		return fmt.replace(/%(.)/g, function(f, m) {
+			if(m == 'H') {
+				post = [' AM', ' PM'][Math.floor(t.h / 12)];
+			}
+
+			return t[m];
+		}) + post;
+	},
+
 	//
 	// BUGBUG: 'proto://host.dom.tld/req.ext?search.' will make the link encapsulate the last dot
 	// 	But wait there, speedy regexer, look at all the other dots.  Gotta be careful!
 	//
 	rich: function (f) {
+		/* {{ 
+		 * Description:
+		 *
+		 * Usage:
+		 *
+		 * Details:
+		 *
+		 * Example:
+		 * 
+		 * }}
+		 */
 		f = f ? f.replace ? f.replace(/[a-z]+:\/\/[^\s^<]+/g, '<a href="$&" target=_blank>$&</a>') : f : f;
 		//f = f ? f.replace ? f.replace(/\ /g, '&nbsp;') : f : f;
 		return f;
 	},
 
 	plain: function(f) {
+		/* {{ 
+		 * Description:
+		 *	Returns the plaintext within a block of html
+		 *
+		 * Usage:
+		 *	(plaintext) $cj.txt.plain(html)
+		 *
+		 * Details:
+		 *	html: dom.innerHTML to sift through
+		 *	plaintext: plaintext representation
+		 *
+		 * Example:
+		 * 	try alert($cj.txt.plain(document.body));
+		 * }}
+		 */
 		if(f && f.replace) {
 			f = f.replace(/<[^>]*>/g, '');
 			// swap out the newlines to preserve them
@@ -601,6 +702,18 @@ $cj.txt = {
 	},
 
 	plural: function (w) {
+		/* {{ 
+		 * Description:
+		 *	Pluralizes a word
+		 *
+		 * Usage:
+		 *
+		 * Details:
+		 *
+		 * Example:
+		 * 
+		 * }}
+		 */
 		if(w[w.length - 1] == 's') {
 			return w + "'";
 		} else {
@@ -609,6 +722,17 @@ $cj.txt = {
 	},
 
 	postfix: function (n) {
+		/* {{ 
+		 * Description:
+		 *
+		 * Usage:
+		 *
+		 * Details:
+		 *
+		 * Example:
+		 * 
+		 * }}
+		 */
 		var table = [ "st", "nd", "rd"];
 
 		if(n > table.length) { 
@@ -620,40 +744,43 @@ $cj.txt = {
 };
 
 
-// the global event model
-// Lots of functionality was cut out (like the ability to deregister)
-// in the interest of speed and simplicity -cjm 2009.10.14
-// 
-// (string)  .getName() : get name of namespace
-// (handle)  .createNS{str) : create a new namespace
-//
-// (handle)  .register(ev, func, [opts]) : register a func to be called when ev is fired
-// 		opts:
-// 			ref: reference handle for supression
-// 			last[false]: make last
-//
-// (handle)  .registerNS(ns, ev, func) : register a func to be called when ev is fired in namespace ns
-//
-// (handle)  .runOnce(ev, func) : run a function for an event one time and deregister it immediately
-//
-// (void)    .deregister(handle) : remove the function from the callback
-//
-// (mixed)   .fire(ev, ops) : fire an event with a list of options for each function
-// (mixed)   .fireNS(ev, ops) : fire an event in namespace NS with a list of options for each function
-//
-// (handle)  .disable(handle) : temporarily disable a function
-// (void)    .enable(handle) : enable a previously disabled function
-//
-// Other:
-// 	cb : cb object for debugging
-// 	ns : namespace object for debugging
-// 	dump : used in the debugger
-//
-// return C.EV.STOP to stop propagation
-//
-// TODO: There needs to be more of an audit trail
-//       and record of what is going on here
 $cj.ev = (function (nameIn) {
+	/* Description:
+	 * 	TODO
+	 * Usage:
+	 * (string)  $cj.ev.getName() : get name of namespace
+	 * (handle)  $cj.ev.createNS{str) : create a new namespace
+	 *
+	 * (handle)  $cj.ev.register(ev, func, [opts]) : register a func to be called when ev is fired
+	 * 		opts:
+	 * 			ref: reference handle for supression
+	 * 			last[false]: make last
+	 *
+	 * (handle)  $cj.ev.registerNS(ns, ev, func) : register a func to be called when ev is fired in namespace ns
+	 *
+	 * (handle)  $cj.ev.runOnce(ev, func) : run a function for an event one time and deregister it immediately
+	 *
+	 * (void)    $cj.ev.deregister(handle) : remove the function from the callback
+	 *
+	 * (mixed)   $cj.ev.fire(ev, ops) : fire an event with a list of options for each function
+	 * (mixed)   $cj.ev.fireNS(ev, ops) : fire an event in namespace NS with a list of options for each function
+	 *
+	 * (handle)  $cj.ev.disable(handle) : temporarily disable a function
+	 * (void)    $cj.ev.enable(handle) : enable a previously disabled function
+	 *
+	 * Other:
+	 * 	cb : cb object for debugging
+	 * 	ns : namespace object for debugging
+	 * 	dump : used in the debugger
+	 *
+	 * return $cj.ev.STOP to stop propagation
+	 *
+	 * Details:
+	 * Example:
+	 * TODO: 
+	 * 	There needs to be more of an audit trail and record of what is going on here
+	 * }}
+	 */
 	var 	cb = {},
 
 		fList = {},
@@ -890,11 +1017,11 @@ $cj.ev = (function (nameIn) {
 					// we can still delete it from the onceList, despite this
 					delete fOnceList[handle];
 				} else {
-					G.err('error firing ' + handle);
+					alert('error firing ' + handle);
 				}
 
 				if(tmp) {
-					if(tmp == C.EV.STOP) {
+					if(tmp == $cj.ev.STOP) {
 						break;
 					}
 
@@ -983,6 +1110,8 @@ $cj.ev = (function (nameIn) {
 // the cross reference for enabling and disabling of functions is a global map
 $cj.ev.xRefMap = {};
 
+$cj.ev.STOP = Math.random();
+
 // as is the function handle counter
 $cj.ev.fHandle = 0;
 
@@ -991,6 +1120,38 @@ $cj.ev.fMap = {};
 
 $cj.list = {
 	obj: function(list) {
+		/* {{ 
+		 * Description:
+		 * 	Unflattens a serialized list that was
+		 * 	created with $cj.obj.list
+		 *
+		 * Usage:
+		 *	(obj) $cj.list.obj(list)
+		 *
+		 * Details:
+		 *	list: Array to unflatten
+		 *	obj: Resulting object
+		 *
+		 * Example:
+		 *	var obj = {
+		 *		a: 1,
+		 *		b: 2,
+		 *		c: 3
+		 *	}
+		 *
+		 * 	If we got this
+		 *	var flattened = $cj.obj.list(obj)
+		 *
+		 * 	which results in this:
+		 *	['a', 1, 'b', 2, 'c', 3]
+		 *
+		 *	Then, we can go backwards as follows:
+		 *
+		 *	$cj.list.obj(flattened)
+		 *
+		 *	And get our original object
+		 * }}
+		 */
 		var 	map = {},
 			len = list.length;
 
@@ -1002,6 +1163,22 @@ $cj.list = {
 	}
 
 	unique: function(list) {
+		/* {{ 
+		 * Description:
+		 *	Removes duplicates from an array.  Does not maintain order
+		 *	Side Effect free.
+		 *
+		 * Usage:
+		 *	(newList) $cj.list.unique(list)
+		 *
+		 * Details:
+		 *	list: Array to process
+		 *	newList: Unique elements
+		 *
+		 * Example:
+		 *	Self-explanatory 
+		 * }}
+		 */
 		var	obj = {},
 			len = list.length;
 
@@ -1015,6 +1192,40 @@ $cj.list = {
 
 $cj.obj = {
 	extract: function (obj, fieldList) {
+		/* {{ 
+		 * Description:
+		 *	Returns a new object, with just the fields
+		 *	in fieldList
+		 *
+		 * Usage:
+		 * 	(newobj) $cj.obj.extract(obj, fieldList)
+		 *
+		 * Details:
+		 * 	obj: Source object
+		 *	fieldList: Array of fields to extract
+		 *
+		 * Example:
+		 *	Pretend I had the following object
+		 *	var obj = {
+		 *		name: "John Doe",
+		 *		Age: "21",
+		 *		SSN: "555-55-5555",
+		 *		CCV: "1012",
+		 *	}
+		 *
+		 *	And I want just the name and age, I can do the following:
+		 *
+		 *	var clean = $cj.obj.extract(obj, ['name', 'age']);
+		 *
+		 *	which would emit:
+		 *		{
+		 *			name: "John Doe",
+		 *			Age: "21"
+		 *		}
+		 *
+		 *	But also keep obj unmodified.
+		 * }}
+		 */
 		var 	field,
 			ret = {},
 			len = fieldList.length;
@@ -1026,29 +1237,46 @@ $cj.obj = {
 		return ret;
 	},
 
-	keys: function (obj) {
-		var	ret = [];
-		
-		for(var el in obj) {
-			ret.push(el);
-		}
-			
-		return ret;
-	},
-
-	values: function (obj) {
-		var	ret = [];
-		
-		for(var el in obj) {
-			ret.push(obj[el]);
-		}
-			
-		return ret;
-	},
-
 	remove: function (obj, fieldList) {
+		/* {{ 
+		 * Description:
+		 *	Removes a number of fields from an object, if they are defined	
+		 *	This is side effect free and doesn't modify the original object
+		 *
+		 * Usage:
+		 *	(newobj) $cj.obj.remove(obj, fieldList)
+		 *
+		 * Details:
+		 * 	newobj: Obj without the elements in fieldList
+		 *	obj: The object to modify
+		 *	fieldList: An array of elements to remove from obj
+		 *
+		 * Example:
+		 *	Pretend I had the following object
+		 *	var obj = {
+		 *		name: "John Doe",
+		 *		Age: "21",
+		 *		SSN: "555-55-5555",
+		 *		CCV: "1012",
+		 *	}
+		 *
+		 *	And I want to easily remove the SSN and the CCV in
+		 *	one compact call, and not havee to worry about whether
+		 *	they may or may not be defined.  Here it is
+		 *	
+		 *	var clean = $cj.obj.remove(obj, ['SSN', 'CCV']);
+		 *
+		 *	which would emit:
+		 *		{
+		 *			name: "John Doe",
+		 *			Age: "21"
+		 *		}
+		 *
+		 *	But also keep obj unmodified.
+		 * }}
+		 */
 		var 	field,
-			ret = new Object(obj),
+			ret = $cj.obj.copy(obj),
 			len = fieldList.length;
 		
 		for(var ix = 0; ix < len; ix++) {
@@ -1062,7 +1290,115 @@ $cj.obj = {
 		return ret;
 	},
 
+
+	keys: function (obj) {
+		/* {{ 
+		 * Description:
+		 *	Returns an array of the keys of an object
+		 *
+		 * Usage:
+		 *	(array)	$cj.obj.keys(obj)
+		 *
+		 * Details:
+		 *	array: The keys of the object
+		 *	obj: The object to get the keys of
+		 *
+		 * Example:
+		 *	var obj = {
+		 *		a: 1,
+		 *		b: 2,
+		 *		c: 3
+		 *	}
+		 *
+		 *	$cj.obj.keys(obj);
+		 *
+		 *	would emit:
+		 *
+		 *	['a', 'b', 'c']
+		 * }}
+		 */
+		var	ret = [];
+		
+		for(var el in obj) {
+			ret.push(el);
+		}
+			
+		return ret;
+	},
+
+	values: function (obj) {
+		/* {{ 
+		 * Description:
+		 *	Returns an array of the values of an object
+		 *
+		 * Usage:
+		 *	(array)	$cj.obj.values(obj)
+		 *
+		 * Details:
+		 *	array: The values of the object
+		 *	obj: The object to get the values of
+		 *
+		 * Example:
+		 *	var obj = {
+		 *		a: 1,
+		 *		b: 2,
+		 *		c: 3
+		 *	}
+		 *
+		 *	$cj.obj.values(obj);
+		 *
+		 *	would emit:
+		 *
+		 *	['1', '2', '3']
+		 * }}
+		 */
+		var	ret = [];
+		
+		for(var el in obj) {
+			ret.push(obj[el]);
+		}
+			
+		return ret;
+	},
+
 	merge: function() {
+		/* {{ 
+		 * Description:
+		 *	Merges 1 or more object.
+		 *
+		 * Usage:
+		 *	(merged) $cj.obj.merge(obj1, obj2, objN);
+		 *
+		 * Details:
+		 * 	merged: All the K/Vs of obj1, obj2, objN merged a fold Right
+		 *
+		 * Example:
+		 * 
+		 * 	var obj1 = {
+		 * 		a: 1,
+		 * 		b: 2,
+		 * 		c: 3
+		 * 	}, 
+		 * 	obj2 = {
+		 * 		x: 1,
+		 * 		y: 2,
+		 * 		z: 3
+		 * 	}
+		 *
+		 * 	$cj.obj(merge(obj1, obj2)
+		 *
+		 * 	would emit:
+		 *
+		 * 	{
+		 * 		a: 1,
+		 * 		b: 2,
+		 * 		c: 3,
+		 * 		x: 1,
+		 *		y: 2,
+		 *		z: 3
+		 *	}
+		 * }}
+		 */
 		var 	args = Array.prototype.slice.call(arguments),
 			ret = args.shift(),
 			len = args.length,
@@ -1082,6 +1418,17 @@ $cj.obj = {
 	// Similar to the above routine but it
 	// it returns a bool if it's changed
 	changed: function(objNew, objOld) {
+		/* {{ 
+		 * Description:
+		 *
+		 * Usage:
+		 *
+		 * Details:
+		 *
+		 * Example:
+		 * 
+		 * }}
+		 */
 		for(var el in objNew) {
 			if(!el in objOld || objNew[el] != objOld[el]) {
 				return true;
@@ -1097,43 +1444,119 @@ $cj.obj = {
 		return false;
 	},
 
-	copy: function(to, from) {
-		to = {};
+	copy: function(obj) {
+		/* {{ 
+		 * Description:
+		 *	Returns a copy of obj, not a reference
+		 *
+		 * Usage:
+		 *	(newObj) $cj.obj.copy(obj)
+		 *
+		 * Details:
+		 *	obj: Object to copy
+		 *	newObj: The copy of the object
+		 *
+		 * Example:
+		 * 	Self explanatory.
+		 * }}
+		 */
+		var copy = {};
 
 		for(var el in from) {
-			to[el] = from[el];
+			copy[el] = obj[el];
 		}
+
+		return copy;
 	},
 
-	list: function(obj) {
-		var 	tuple = [],
-			ix = 0;
+	tuples: function(obj) {
+		/* {{ 
+		 * Description:
+		 *	Creates a list of tuples from an object
+		 *	This is similar to what happens in python
+		 *
+		 * Usage:
+		 *	(tuple) $cj.obj.list(obj)
+		 *
+		 * Details:
+		 *	obj: Object to process
+		 *	tuple: Array of K/V tuples
+		 *
+		 * Example:
+		 *	var obj = {
+		 *		a: 1,
+		 *		b: 2,
+		 *		c: 3
+		 *	}
+		 *
+		 *	$cj.obj.list(obj);
+		 *
+		 *	would emit:
+		 *	[
+		 *		['a', 1],
+		 *		['b', 2],
+		 *		['c', 3],
+		 *	]
+		 * }}
+		 */
+		var 	tuple = [];
 		
 		for(var el in obj) {
-			tuple[ix] = [el, obj[el]];
-			ix++;
+			tuple.push([el, obj[el]]);
 		}
 
 		return tuple;
+	},
+
+	list: function(obj) {
+		/* {{ 
+		 * Description:
+		 *	Creates a flattened, serialized array of an object
+		 *
+		 * Usage:
+		 *	(list) $cj.obj.list(obj)
+		 *
+		 * Details:
+		 *	obj: Object to process
+		 *	list: Array of K/V tuples
+		 *
+		 * Example:
+		 *	var obj = {
+		 *		a: 1,
+		 *		b: 2,
+		 *		c: 3
+		 *	}
+		 *
+		 *	$cj.obj.list(obj);
+		 *
+		 *	would emit:
+		 *	['a', 1, 'b', 2, 'c', 3]
+		 * }}
+		 */
+		var 	list = [];
+		
+		for(var el in obj) {
+			list.push(el);
+			list.push(obj[el]);
+		}
+
+		return list;
 	}
 };
 
 $cj.extra = {
-	// takes a va_list and returns the first valid element
-	valid: function () {
-		var 	i, 
-			args = Array.prototype.slice.call(arguments);
-
-		for(i in args) {
-			if( (typeof (args[i]) !== 'undefined') && (args[i] !== null) ) {
-				return args[i];
-			}	
-		}
-
-		return "";
-	},
-
 	postParams: function(obj) {
+		/* {{ 
+		 * Description:
+		 *
+		 * Usage:
+		 *
+		 * Details:
+		 *
+		 * Example:
+		 * 
+		 * }}
+		 */
 		var 	ret = {}, 
 			el;
 
@@ -1145,6 +1568,21 @@ $cj.extra = {
 	},
 
 	loadJson: function (file, cb) {
+		/* {{ 
+		 * Description:
+		 *
+		 *
+		 * Usage:
+		 *
+		 *
+		 * Details:
+		 *
+		 *
+		 * Example:
+		 * 
+		 *
+		 * }}
+		 */
 		$.get(file, function(f) {
 			var ref = this.url.split('.')[0];
 
@@ -1157,7 +1595,49 @@ $cj.extra = {
 		}, 'text');
 	},
 
+	onEnter: function (sel, cb) {
+		/* {{ 
+		 * Description:
+		 *
+		 * Usage:
+		 *
+		 * Details:
+		 *
+		 * Example:
+		 * 
+		 * }}
+		 */
+		$(sel).keyup(function (e) {
+			var kc;
+
+			if (window.event) kc = window.event.keyCode;
+			else if (e) kc = e.which;
+			else return true;
+
+			if (kc == K.enter) {
+				cb.apply(this);
+			}
+
+			return true;
+		});
+	},
+
 	filler: function (sel) {
+		/* {{ 
+		 * Description:
+		 *	Simple templating library
+		 *
+		 * Usage:
+		 *
+		 *
+		 * Details:
+		 *
+		 *
+		 * Example:
+		 * 
+		 *
+		 * }}
+		 */
 		$(sel).each(function (f) {
 			this.innerHTML = this.innerHTML.replace(/##(.*?)##/g, function (str, p1) {
 				return eval(p1);
@@ -1165,5 +1645,145 @@ $cj.extra = {
 			
 			this.style.visibility = 'visible';
 		});
-	}
+	},
+
+	bubbleattr: function(start, attr) {
+		/* {{ 
+		 * Description:
+		 * 	Goes iteratively to parent nodes until the attr is defined
+		 *
+		 * Usage:
+		 *
+		 * Details:
+		 *
+		 * Example:
+		 * 
+		 * }}
+		 */
+		var val;
+		
+		do {
+			val = start.getAttribute(attr);
+
+			if(val !== null) {
+				return val;
+			}
+
+		} while(start = start.parentNode);
+
+		return null;
+	},
+
+	download: (function(){
+		/* {{ 
+		 * Description:
+		 *
+		 *
+		 * Usage:
+		 *
+		 *
+		 * Details:
+		 *
+		 *
+		 * Example:
+		 * 
+		 *
+		 * }}
+		 */
+		var 	iframe;
+
+		function init(){
+			if(!iframe) {
+				iframe = $("<iframe style=visibility:hidden></iframe").appendTo(document.body);
+			}
+		}
+
+		return function (url) {
+			init();
+			iframe.attr('src', url);
+		}
+	})(),	
+
+	reload: function(){
+		/* {{ 
+		 * Description:
+		 *	Forces a reload of a page
+		 *
+		 * Usage:
+		 *	$cj.extra.reload()
+		 *
+		 * Details:
+		 *
+		 * Example:
+		 * 	Self-explanatory
+		 * }}
+		 */
+		window.location = window.location.toString();
+	},
+
+	newTab: (function () {
+		/* {{ 
+		 * Description:
+		 *
+		 *
+		 * Usage:
+		 *
+		 *
+		 * Details:
+		 *
+		 *
+		 * Example:
+		 * 
+		 *
+		 * }}
+		 */
+		var 	form, 
+			input;
+
+		function init() {
+			if(!form) {
+				form = $('<form id=newtab target=_blank method=get></form>').appendTo(document.body);
+			} 
+		}
+
+		function modify(o) {
+			for(var k in o) {
+				form.append('<input name="' + k + '" value="' + o[k] + '">');
+			}
+		}
+
+		return {
+			setUrl: function (url, o) {
+				init();
+				form.attr('action', url);
+
+				if(o) {
+					modify(o);	
+				}
+			},
+
+			modify: modify,
+
+			magic: function (urlIn) {
+				var 	optList = urlIn.split(/[=?&]/g),
+					url = optList.shift(),
+					opts = {},
+					len = optList.length;
+
+				for(var ix = 0; ix < len; ix +=2 ) {
+					opts[optList[ix]] = optList[ix + 1];
+				}
+
+				$cj.newTab.setUrl(url, opts);
+
+				setTimeout(function () {
+					$lib.newTab.create();
+				},1);
+			},
+
+			create: function () {
+				document.getElementById('newtab').submit();
+			}
+		}
+	})()
 };
