@@ -9,7 +9,6 @@
  *   Jquery
  */
 
-
 var $cj = {};
 
 $cj.async = {
@@ -23,10 +22,10 @@ $cj.async = {
 		 * 	$cj.callback.exec (pointer, directive, options);
 		 *
 		 * Details:
-		 * 	directive: Any text value or array of text values
-		 * 	function: A callback associated with the directive
-		 * 	pointer: A context for the callback
-		 * 	options: An array of options to pass to the function
+		 * 	directive (required): Any text value or array of text values
+		 * 	pointer (required): A context for the callback
+		 * 	function (optional): A callback associated with the directive
+		 * 	options (optional): An array of options to pass to the function
 		 *
 		 * Example:
 		 * 	Say I had 3 dialog boxes, named 'Send Mail',
@@ -120,8 +119,8 @@ $cj.async = {
 		 * 	$cj.mutex.waitOn (name, function)
 		 *
 		 * Details:
-		 * 	name: A mutex name
-		 * 	function: A callback function
+		 * 	name (required): A mutex name
+		 * 	function (optional): A callback function
 		 *
 		 * Example:
 		 * 	Pretend that you asynchronously load
@@ -206,9 +205,9 @@ $cj.async = {
 		 * 	$cj.lazyLoad.fire (filename);
 		 *
 		 * Details:
-		 * 	filename: A script to load, such as http://hostname/script.js
-		 * 	function: A function that requires this file
-		 * 	options: See Below
+		 * 	filename (required): A script to load, such as http://hostname/script.js
+		 * 	function (optional): A function that requires this file
+		 * 	options (optional): See Below
 		 *
 		 * Example:
 		 * 	This is similar to the mutex above and should probably
@@ -374,10 +373,10 @@ $cj.dom = function(o) {
 	 *
 	 * Details:
 	 * 	el: The constructed element
-	 * 	dom: The element to attach to
-	 * 	type: The DOM type of the element to contstruct, such as 'span' or 'input'
-	 * 	name: The name of the element to construct, can be null or omitted
-	 * 	html: Text or html to place inside of the element, can be null or omitted
+	 * 	dom (required): The element to attach to
+	 * 	type (required): The DOM type of the element to contstruct, such as 'span' or 'input'
+	 * 	name (optional): The name of the element to construct, can be null or omitted
+	 * 	html (optional): Text or html to place inside of the element, can be null or omitted
 	 *
 	 * Example:
 	 * 	TODO
@@ -470,6 +469,7 @@ $cj.dom = function(o) {
 
 			return tmp;
 		},
+
 		// this supports scopes...
 		ap: function (el, type, name, html) {
 			var 	tmp = el.appendChild(document.createElement(type)),
@@ -546,17 +546,24 @@ $cj.txt = {
 		 *	(htmlText) $cj.text.utf8 (slashedText)
 		 *
 		 * Details:
+		 *	slashedText (required): input text
+		 *	htmlText: &#... formatted HTML
 		 *
 		 * Example:
-		 * 
+		 * 	Sometimes text will be emitted like so
+		 *
+		 * 	Hello,\u000aHow are you?
+		 *
+		 * 	This takes that and converts it to
+		 *
+		 * 	Hello,&#x000a;How are you?
+		 *
 		 * }}
 		 */
-		if(!d) {
-			return '';
-		}
 
-		d = d.replace(/\\u([0-9a-f]*)/g, '&#x$1;');
-		return d.replace(/\\([\\'"])/g, '$1');
+		return d ? 
+			d.replace(/\\([\\'"])/g, '$1').replace(/\\u([0-9a-f]*)/g, '&#x$1;') :
+			'';
 	},
 
 	padLeft: function(num, width){
@@ -569,8 +576,8 @@ $cj.txt = {
 		 *
 		 * Details:
 		 *	text: The outputted text
-		 *	number: The number to pad
-		 *	width: The width of the number
+		 *	number (required): The number to pad
+		 *	width (required): The width of the number
 		 *
 		 * Example:
 		 * 	Oftentimes, you are dealing with formatting
@@ -610,7 +617,7 @@ $cj.txt = {
 		 *	(text) $cj.txt.time(format)
 		 *
 		 * Details:
-		 *	format: %[Y|M|N|D|W|H|h|m|s]
+		 *	format (optional): Is of the form %[Y|M|N|D|W|H|h|m|s]
 		 * 		Y = year, such as 2010
 		 * 		N = Named month, such as Feb
 		 * 		M = month, such 02
@@ -656,18 +663,25 @@ $cj.txt = {
 	rich: function (f) {
 		/* {{ 
 		 * Description:
+		 *	Wraps a link in an href tag
 		 *
 		 * Usage:
+		 *	(richText) $cj.text.rich(plainText)
 		 *
 		 * Details:
+		 *	plainText (required): Text to html-ify
+		 *	richText: output html text with links
 		 *
 		 * Example:
-		 * 
+		 * 	$cj.text.rich('You should try http://www.google.com.  It's a nice search engine.')
+		 *
+		 * 	Would emit:
+		 *
+		 *	You should try <a href="http://www.google.com">http://www.google.com</a>. It's a nice
+		 *	search engine.
 		 * }}
 		 */
-		f = f ? f.replace ? f.replace(/[a-z]+:\/\/[^\s^<]+/g, '<a href="$&" target=_blank>$&</a>') : f : f;
-		//f = f ? f.replace ? f.replace(/\ /g, '&nbsp;') : f : f;
-		return f;
+		return f ? f.replace ? f.replace(/[a-z]+:\/\/[^\s^<]+/g, '<a href="$&" target=_blank>$&</a>') : f : f;
 	},
 
 	plain: function(f) {
@@ -699,54 +713,466 @@ $cj.txt = {
 		}
 
 		return f;
-	},
-
-	plural: function (w) {
-		/* {{ 
-		 * Description:
-		 *	Pluralizes a word
-		 *
-		 * Usage:
-		 *
-		 * Details:
-		 *
-		 * Example:
-		 * 
-		 * }}
-		 */
-		if(w[w.length - 1] == 's') {
-			return w + "'";
-		} else {
-			return w + "'s";
-		}
-	},
-
-	postfix: function (n) {
-		/* {{ 
-		 * Description:
-		 *
-		 * Usage:
-		 *
-		 * Details:
-		 *
-		 * Example:
-		 * 
-		 * }}
-		 */
-		var table = [ "st", "nd", "rd"];
-
-		if(n > table.length) { 
-			return n + 'th';
-		} else {
-			return n + table[n - 1];
-		}
 	}
 };
 
+$cj.list = {
+	obj: function(list) {
+		/* {{ 
+		 * Description:
+		 * 	Unflattens a serialized list that was
+		 * 	created with $cj.obj.list
+		 *
+		 * Usage:
+		 *	(obj) $cj.list.obj(list)
+		 *
+		 * Details:
+		 *	list (required): Array to unflatten
+		 *	obj: Resulting object
+		 *
+		 * Example:
+		 *	var obj = {
+		 *		a: 1,
+		 *		b: 2,
+		 *		c: 3
+		 *	}
+		 *
+		 * 	If we got this
+		 *	var flattened = $cj.obj.list(obj)
+		 *
+		 * 	which results in this:
+		 *	['a', 1, 'b', 2, 'c', 3]
+		 *
+		 *	Then, we can go backwards as follows:
+		 *
+		 *	$cj.list.obj(flattened)
+		 *
+		 *	And get our original object
+		 * }}
+		 */
+		var 	map = {},
+			len = list.length;
+
+		for(var ix; ix < len; ix+=2) {
+			map[list[ix]] = list[ix + 1];
+		}
+
+		return map;
+	},
+
+	unique: function(list) {
+		/* {{ 
+		 * Description:
+		 *	Removes duplicates from an array.  Does not maintain order
+		 *	Side Effect free.
+		 *
+		 * Usage:
+		 *	(newList) $cj.list.unique(list)
+		 *
+		 * Details:
+		 *	list (required): Array to process
+		 *	newList: Unique elements
+		 *
+		 * Example:
+		 *	Self-explanatory 
+		 * }}
+		 */
+		var	obj = {},
+			len = list.length;
+
+		for(var ix = 0; ix < len; ix++) {
+			obj[list[ix]] = 0;
+		}
+
+		return $cj.obj.keys(obj);
+	}
+};
+
+$cj.obj = {
+	extract: function (obj, fieldList) {
+		/* {{ 
+		 * Description:
+		 *	Returns a new object, with just the fields
+		 *	in fieldList
+		 *
+		 * Usage:
+		 * 	(newobj) $cj.obj.extract(obj, fieldList)
+		 *
+		 * Details:
+		 * 	obj (required): Source object
+		 *	fieldList (required): Array of fields to extract
+		 *
+		 * Example:
+		 *	Pretend I had the following object
+		 *	var obj = {
+		 *		name: "John Doe",
+		 *		Age: "21",
+		 *		SSN: "555-55-5555",
+		 *		CCV: "1012",
+		 *	}
+		 *
+		 *	And I want just the name and age, I can do the following:
+		 *
+		 *	var clean = $cj.obj.extract(obj, ['name', 'age']);
+		 *
+		 *	which would emit:
+		 *		{
+		 *			name: "John Doe",
+		 *			Age: "21"
+		 *		}
+		 *
+		 *	But also keep obj unmodified.
+		 * }}
+		 */
+		var 	field,
+			ret = {},
+			len = fieldList.length;
+		
+		for(var ix = 0; ix < len; ix++) {
+			ret[fieldList[ix]] = obj[fieldList[ix]];
+		}
+
+		return ret;
+	},
+
+	remove: function (obj, fieldList) {
+		/* {{ 
+		 * Description:
+		 *	Removes a number of fields from an object, if they are defined	
+		 *	This is side effect free and doesn't modify the original object
+		 *
+		 * Usage:
+		 *	(newobj) $cj.obj.remove(obj, fieldList)
+		 *
+		 * Details:
+		 * 	newobj: Obj without the elements in fieldList
+		 *	obj (required): The object to modify
+		 *	fieldList (required): An array of elements to remove from obj
+		 *
+		 * Example:
+		 *	Pretend I had the following object
+		 *	var obj = {
+		 *		name: "John Doe",
+		 *		Age: "21",
+		 *		SSN: "555-55-5555",
+		 *		CCV: "1012",
+		 *	}
+		 *
+		 *	And I want to easily remove the SSN and the CCV in
+		 *	one compact call, and not havee to worry about whether
+		 *	they may or may not be defined.  Here it is
+		 *	
+		 *	var clean = $cj.obj.remove(obj, ['SSN', 'CCV']);
+		 *
+		 *	which would emit:
+		 *		{
+		 *			name: "John Doe",
+		 *			Age: "21"
+		 *		}
+		 *
+		 *	But also keep obj unmodified.
+		 * }}
+		 */
+		var 	field,
+			ret = $cj.obj.copy(obj),
+			len = fieldList.length;
+		
+		for(var ix = 0; ix < len; ix++) {
+			field = fieldList[ix];
+
+			try {
+				delete ret[field];
+			} catch(ex){}
+		}
+
+		return ret;
+	},
+
+
+	keys: function (obj) {
+		/* {{ 
+		 * Description:
+		 *	Returns an array of the keys of an object
+		 *
+		 * Usage:
+		 *	(array)	$cj.obj.keys(obj)
+		 *
+		 * Details:
+		 *	array: The keys of the object
+		 *	obj (required): The object to get the keys of
+		 *
+		 * Example:
+		 *	var obj = {
+		 *		a: 1,
+		 *		b: 2,
+		 *		c: 3
+		 *	}
+		 *
+		 *	$cj.obj.keys(obj);
+		 *
+		 *	would emit:
+		 *
+		 *	['a', 'b', 'c']
+		 * }}
+		 */
+		var	ret = [];
+		
+		for(var el in obj) {
+			ret.push(el);
+		}
+			
+		return ret;
+	},
+
+	values: function (obj) {
+		/* {{ 
+		 * Description:
+		 *	Returns an array of the values of an object
+		 *
+		 * Usage:
+		 *	(array)	$cj.obj.values(obj)
+		 *
+		 * Details:
+		 *	array: The values of the object
+		 *	obj (required): The object to get the values of
+		 *
+		 * Example:
+		 *	var obj = {
+		 *		a: 1,
+		 *		b: 2,
+		 *		c: 3
+		 *	}
+		 *
+		 *	$cj.obj.values(obj);
+		 *
+		 *	would emit:
+		 *
+		 *	['1', '2', '3']
+		 * }}
+		 */
+		var	ret = [];
+		
+		for(var el in obj) {
+			ret.push(obj[el]);
+		}
+			
+		return ret;
+	},
+
+	merge: function() {
+		/* {{ 
+		 * Description:
+		 *	Merges 1 or more object.
+		 *
+		 * Usage:
+		 *	(merged) $cj.obj.merge(obj1, obj2, objN);
+		 *
+		 * Details:
+		 * 	merged: All the K/Vs of obj1, obj2, objN merged a fold Right
+		 *
+		 * Example:
+		 * 
+		 * 	var obj1 = {
+		 * 		a: 1,
+		 * 		b: 2,
+		 * 		c: 3
+		 * 	}, 
+		 * 	obj2 = {
+		 * 		x: 1,
+		 * 		y: 2,
+		 * 		z: 3
+		 * 	}
+		 *
+		 * 	$cj.obj(merge(obj1, obj2)
+		 *
+		 * 	would emit:
+		 *
+		 * 	{
+		 * 		a: 1,
+		 * 		b: 2,
+		 * 		c: 3,
+		 * 		x: 1,
+		 *		y: 2,
+		 *		z: 3
+		 *	}
+		 * }}
+		 */
+		var 	args = Array.prototype.slice.call(arguments),
+			ret = args.shift(),
+			len = args.length,
+			tmp;
+
+		for(var ix = 0; ix < len; ix++) {
+			tmp = args[ix];
+
+			for(var el in tmp) {
+				ret[el] = tmp[el];
+			}
+		}
+
+		return ret;
+	},
+
+	changed: function(obj1, obj2) {
+		/* {{ 
+		 * Description:
+		 *	Looks for changes between two objects
+		 *	and returns a boolean
+		 *
+		 * Usage:
+		 *	(boolean) $cj.obj.changed(obj1, obj2)
+		 *
+		 * Details:
+		 *	obj1 (required): First object to check
+		 *	obj2 (required): Object to compare against
+		 *
+		 * Example:
+		 *	Self-explanatory 
+		 * }}
+		 */
+		for(var el in obj1) {
+			if(!el in obj2 || obj1[el] != obj2[el]) {
+				return true;
+			}
+		}
+
+		for(el in obj2) {
+			if(!el in obj1) {
+				return true;
+			}
+		}
+
+		return false;
+	},
+
+	copy: function(obj) {
+		/* {{ 
+		 * Description:
+		 *	Returns a copy of obj, not a reference
+		 *
+		 * Usage:
+		 *	(newObj) $cj.obj.copy(obj)
+		 *
+		 * Details:
+		 *	obj (required): Object to copy
+		 *	newObj: The copy of the object
+		 *
+		 * Example:
+		 * 	Self explanatory.
+		 * }}
+		 */
+		var copy = {};
+
+		for(var el in from) {
+			copy[el] = obj[el];
+		}
+
+		return copy;
+	},
+
+	tuples: function(obj) {
+		/* {{ 
+		 * Description:
+		 *	Creates a list of tuples from an object
+		 *	This is similar to what happens in python
+		 *
+		 * Usage:
+		 *	(tuple) $cj.obj.list(obj)
+		 *
+		 * Details:
+		 *	obj (required) : Object to process
+		 *	tuple: Array of K/V tuples
+		 *
+		 * Example:
+		 *	var obj = {
+		 *		a: 1,
+		 *		b: 2,
+		 *		c: 3
+		 *	}
+		 *
+		 *	$cj.obj.list(obj);
+		 *
+		 *	would emit:
+		 *	[
+		 *		['a', 1],
+		 *		['b', 2],
+		 *		['c', 3],
+		 *	]
+		 * }}
+		 */
+		var 	tuple = [];
+		
+		for(var el in obj) {
+			tuple.push([el, obj[el]]);
+		}
+
+		return tuple;
+	},
+
+	list: function(obj) {
+		/* {{ 
+		 * Description:
+		 *	Creates a flattened, serialized array of an object
+		 *
+		 * Usage:
+		 *	(list) $cj.obj.list(obj)
+		 *
+		 * Details:
+		 *	obj (required): Object to process
+		 *	list: Array of K/V tuples
+		 *
+		 * Example:
+		 *	var obj = {
+		 *		a: 1,
+		 *		b: 2,
+		 *		c: 3
+		 *	}
+		 *
+		 *	$cj.obj.list(obj);
+		 *
+		 *	would emit:
+		 *	['a', 1, 'b', 2, 'c', 3]
+		 * }}
+		 */
+		var 	list = [];
+		
+		for(var el in obj) {
+			list.push(el);
+			list.push(obj[el]);
+		}
+
+		return list;
+	}
+};
 
 $cj.ev = (function (nameIn) {
 	/* Description:
-	 * 	TODO
+	 *
+	 * 	A generic namespace driven event model
+	 *	This has some design differences over the
+	 *	generic DOM event model that is wrapped by
+	 *	Jquery and may be more suited for specific
+	 *	purposes.
+	 *
+	 *	For one thing, using the DOM limits one
+	 *	to the native DOM model of say, 
+	 *
+	 *	 * order of function calls 
+	 *	 * calling convention
+	 *	 * parameter passing
+	 *	 * propogation models 
+	 *	 * handling of return values
+	 *	 * stack tracing and auditing of functions
+	 *	 * customizing a context of an instantiation
+	 *	 * setting prioritization and stack orders
+	 *	 * avoiding event cycles
+	 *	 * setting sentinals on number of times called
+	 *	 * tracking instances and doing counters
+	 *	 * generalizing a call 
+	 *
+	 *	For all those reasons and more, a custom event
+	 *	model is needed.
+	 *
 	 * Usage:
 	 * (string)  $cj.ev.getName() : get name of namespace
 	 * (handle)  $cj.ev.createNS{str) : create a new namespace
@@ -1102,7 +1528,7 @@ $cj.ev = (function (nameIn) {
 			} 
 		}
 
-		return '<pre>' + o.join('<br>') + '</pre>';
+		return  o.join('<br>');
 	}
 	    
 	return pub;
@@ -1118,436 +1544,11 @@ $cj.ev.fHandle = 0;
 // and the even cross reference, which stores the namespaces
 $cj.ev.fMap = {};
 
-$cj.list = {
-	obj: function(list) {
-		/* {{ 
-		 * Description:
-		 * 	Unflattens a serialized list that was
-		 * 	created with $cj.obj.list
-		 *
-		 * Usage:
-		 *	(obj) $cj.list.obj(list)
-		 *
-		 * Details:
-		 *	list: Array to unflatten
-		 *	obj: Resulting object
-		 *
-		 * Example:
-		 *	var obj = {
-		 *		a: 1,
-		 *		b: 2,
-		 *		c: 3
-		 *	}
-		 *
-		 * 	If we got this
-		 *	var flattened = $cj.obj.list(obj)
-		 *
-		 * 	which results in this:
-		 *	['a', 1, 'b', 2, 'c', 3]
-		 *
-		 *	Then, we can go backwards as follows:
-		 *
-		 *	$cj.list.obj(flattened)
-		 *
-		 *	And get our original object
-		 * }}
-		 */
-		var 	map = {},
-			len = list.length;
-
-		for(var ix; ix < len; ix+=2) {
-			map[list[ix]] = list[ix + 1];
-		}
-
-		return map;
-	},
-
-	unique: function(list) {
-		/* {{ 
-		 * Description:
-		 *	Removes duplicates from an array.  Does not maintain order
-		 *	Side Effect free.
-		 *
-		 * Usage:
-		 *	(newList) $cj.list.unique(list)
-		 *
-		 * Details:
-		 *	list: Array to process
-		 *	newList: Unique elements
-		 *
-		 * Example:
-		 *	Self-explanatory 
-		 * }}
-		 */
-		var	obj = {},
-			len = list.length;
-
-		for(var ix = 0; ix < len; ix++) {
-			obj[list[ix]] = 0;
-		}
-
-		return $cj.obj.keys(obj);
-	}
-};
-
-$cj.obj = {
-	extract: function (obj, fieldList) {
-		/* {{ 
-		 * Description:
-		 *	Returns a new object, with just the fields
-		 *	in fieldList
-		 *
-		 * Usage:
-		 * 	(newobj) $cj.obj.extract(obj, fieldList)
-		 *
-		 * Details:
-		 * 	obj: Source object
-		 *	fieldList: Array of fields to extract
-		 *
-		 * Example:
-		 *	Pretend I had the following object
-		 *	var obj = {
-		 *		name: "John Doe",
-		 *		Age: "21",
-		 *		SSN: "555-55-5555",
-		 *		CCV: "1012",
-		 *	}
-		 *
-		 *	And I want just the name and age, I can do the following:
-		 *
-		 *	var clean = $cj.obj.extract(obj, ['name', 'age']);
-		 *
-		 *	which would emit:
-		 *		{
-		 *			name: "John Doe",
-		 *			Age: "21"
-		 *		}
-		 *
-		 *	But also keep obj unmodified.
-		 * }}
-		 */
-		var 	field,
-			ret = {},
-			len = fieldList.length;
-		
-		for(var ix = 0; ix < len; ix++) {
-			ret[fieldList[ix]] = obj[fieldList[ix]];
-		}
-
-		return ret;
-	},
-
-	remove: function (obj, fieldList) {
-		/* {{ 
-		 * Description:
-		 *	Removes a number of fields from an object, if they are defined	
-		 *	This is side effect free and doesn't modify the original object
-		 *
-		 * Usage:
-		 *	(newobj) $cj.obj.remove(obj, fieldList)
-		 *
-		 * Details:
-		 * 	newobj: Obj without the elements in fieldList
-		 *	obj: The object to modify
-		 *	fieldList: An array of elements to remove from obj
-		 *
-		 * Example:
-		 *	Pretend I had the following object
-		 *	var obj = {
-		 *		name: "John Doe",
-		 *		Age: "21",
-		 *		SSN: "555-55-5555",
-		 *		CCV: "1012",
-		 *	}
-		 *
-		 *	And I want to easily remove the SSN and the CCV in
-		 *	one compact call, and not havee to worry about whether
-		 *	they may or may not be defined.  Here it is
-		 *	
-		 *	var clean = $cj.obj.remove(obj, ['SSN', 'CCV']);
-		 *
-		 *	which would emit:
-		 *		{
-		 *			name: "John Doe",
-		 *			Age: "21"
-		 *		}
-		 *
-		 *	But also keep obj unmodified.
-		 * }}
-		 */
-		var 	field,
-			ret = $cj.obj.copy(obj),
-			len = fieldList.length;
-		
-		for(var ix = 0; ix < len; ix++) {
-			field = fieldList[ix];
-
-			try {
-				delete ret[field];
-			} catch(ex){}
-		}
-
-		return ret;
-	},
-
-
-	keys: function (obj) {
-		/* {{ 
-		 * Description:
-		 *	Returns an array of the keys of an object
-		 *
-		 * Usage:
-		 *	(array)	$cj.obj.keys(obj)
-		 *
-		 * Details:
-		 *	array: The keys of the object
-		 *	obj: The object to get the keys of
-		 *
-		 * Example:
-		 *	var obj = {
-		 *		a: 1,
-		 *		b: 2,
-		 *		c: 3
-		 *	}
-		 *
-		 *	$cj.obj.keys(obj);
-		 *
-		 *	would emit:
-		 *
-		 *	['a', 'b', 'c']
-		 * }}
-		 */
-		var	ret = [];
-		
-		for(var el in obj) {
-			ret.push(el);
-		}
-			
-		return ret;
-	},
-
-	values: function (obj) {
-		/* {{ 
-		 * Description:
-		 *	Returns an array of the values of an object
-		 *
-		 * Usage:
-		 *	(array)	$cj.obj.values(obj)
-		 *
-		 * Details:
-		 *	array: The values of the object
-		 *	obj: The object to get the values of
-		 *
-		 * Example:
-		 *	var obj = {
-		 *		a: 1,
-		 *		b: 2,
-		 *		c: 3
-		 *	}
-		 *
-		 *	$cj.obj.values(obj);
-		 *
-		 *	would emit:
-		 *
-		 *	['1', '2', '3']
-		 * }}
-		 */
-		var	ret = [];
-		
-		for(var el in obj) {
-			ret.push(obj[el]);
-		}
-			
-		return ret;
-	},
-
-	merge: function() {
-		/* {{ 
-		 * Description:
-		 *	Merges 1 or more object.
-		 *
-		 * Usage:
-		 *	(merged) $cj.obj.merge(obj1, obj2, objN);
-		 *
-		 * Details:
-		 * 	merged: All the K/Vs of obj1, obj2, objN merged a fold Right
-		 *
-		 * Example:
-		 * 
-		 * 	var obj1 = {
-		 * 		a: 1,
-		 * 		b: 2,
-		 * 		c: 3
-		 * 	}, 
-		 * 	obj2 = {
-		 * 		x: 1,
-		 * 		y: 2,
-		 * 		z: 3
-		 * 	}
-		 *
-		 * 	$cj.obj(merge(obj1, obj2)
-		 *
-		 * 	would emit:
-		 *
-		 * 	{
-		 * 		a: 1,
-		 * 		b: 2,
-		 * 		c: 3,
-		 * 		x: 1,
-		 *		y: 2,
-		 *		z: 3
-		 *	}
-		 * }}
-		 */
-		var 	args = Array.prototype.slice.call(arguments),
-			ret = args.shift(),
-			len = args.length,
-			tmp;
-
-		for(var ix = 0; ix < len; ix++) {
-			tmp = args[ix];
-
-			for(var el in tmp) {
-				ret[el] = tmp[el];
-			}
-		}
-
-		return ret;
-	},
-
-	// Similar to the above routine but it
-	// it returns a bool if it's changed
-	changed: function(objNew, objOld) {
-		/* {{ 
-		 * Description:
-		 *
-		 * Usage:
-		 *
-		 * Details:
-		 *
-		 * Example:
-		 * 
-		 * }}
-		 */
-		for(var el in objNew) {
-			if(!el in objOld || objNew[el] != objOld[el]) {
-				return true;
-			}
-		}
-
-		for(el in objOld) {
-			if(!el in objNew) {
-				return true;
-			}
-		}
-
-		return false;
-	},
-
-	copy: function(obj) {
-		/* {{ 
-		 * Description:
-		 *	Returns a copy of obj, not a reference
-		 *
-		 * Usage:
-		 *	(newObj) $cj.obj.copy(obj)
-		 *
-		 * Details:
-		 *	obj: Object to copy
-		 *	newObj: The copy of the object
-		 *
-		 * Example:
-		 * 	Self explanatory.
-		 * }}
-		 */
-		var copy = {};
-
-		for(var el in from) {
-			copy[el] = obj[el];
-		}
-
-		return copy;
-	},
-
-	tuples: function(obj) {
-		/* {{ 
-		 * Description:
-		 *	Creates a list of tuples from an object
-		 *	This is similar to what happens in python
-		 *
-		 * Usage:
-		 *	(tuple) $cj.obj.list(obj)
-		 *
-		 * Details:
-		 *	obj: Object to process
-		 *	tuple: Array of K/V tuples
-		 *
-		 * Example:
-		 *	var obj = {
-		 *		a: 1,
-		 *		b: 2,
-		 *		c: 3
-		 *	}
-		 *
-		 *	$cj.obj.list(obj);
-		 *
-		 *	would emit:
-		 *	[
-		 *		['a', 1],
-		 *		['b', 2],
-		 *		['c', 3],
-		 *	]
-		 * }}
-		 */
-		var 	tuple = [];
-		
-		for(var el in obj) {
-			tuple.push([el, obj[el]]);
-		}
-
-		return tuple;
-	},
-
-	list: function(obj) {
-		/* {{ 
-		 * Description:
-		 *	Creates a flattened, serialized array of an object
-		 *
-		 * Usage:
-		 *	(list) $cj.obj.list(obj)
-		 *
-		 * Details:
-		 *	obj: Object to process
-		 *	list: Array of K/V tuples
-		 *
-		 * Example:
-		 *	var obj = {
-		 *		a: 1,
-		 *		b: 2,
-		 *		c: 3
-		 *	}
-		 *
-		 *	$cj.obj.list(obj);
-		 *
-		 *	would emit:
-		 *	['a', 1, 'b', 2, 'c', 3]
-		 * }}
-		 */
-		var 	list = [];
-		
-		for(var el in obj) {
-			list.push(el);
-			list.push(obj[el]);
-		}
-
-		return list;
-	}
-};
-
 $cj.extra = {
 	postParams: function(obj) {
 		/* {{ 
 		 * Description:
+		 *	Serialize an object
 		 *
 		 * Usage:
 		 *
@@ -1570,13 +1571,14 @@ $cj.extra = {
 	loadJson: function (file, cb) {
 		/* {{ 
 		 * Description:
-		 *
+		 *	Load a json object and apply it to self.
 		 *
 		 * Usage:
-		 *
+		 *	$cj.extra.loadJson(file, function)
 		 *
 		 * Details:
-		 *
+		 *	file (required): File to load, such as "{a:1,b:2}"
+		 *	function (optional): A callback after the file is loaded
 		 *
 		 * Example:
 		 * 
@@ -1598,10 +1600,14 @@ $cj.extra = {
 	onEnter: function (sel, cb) {
 		/* {{ 
 		 * Description:
+		 * 	Run a block of code when enter is pressed on a given element
 		 *
 		 * Usage:
+		 * 	$cj.extra.onEnter(selector, function)
 		 *
 		 * Details:
+		 * 	selector: Jquery selector
+		 *	function: A callback to run when the enter button is presssed
 		 *
 		 * Example:
 		 * 
@@ -1611,14 +1617,12 @@ $cj.extra = {
 			var kc;
 
 			if (window.event) kc = window.event.keyCode;
-			else if (e) kc = e.which;
-			else return true;
+			else kc = e.which;
 
-			if (kc == K.enter) {
+			// enter is 13
+			if (kc == 13) {
 				cb.apply(this);
 			}
-
-			return true;
 		});
 	},
 
@@ -1628,14 +1632,19 @@ $cj.extra = {
 		 *	Simple templating library
 		 *
 		 * Usage:
-		 *
+		 *	$cj.extra.filler(sel)
 		 *
 		 * Details:
-		 *
+		 *	sel: Jquery Selector
 		 *
 		 * Example:
-		 * 
+		 * 	The template format here is ##(javascript statement)##
+		 * 	Such as
 		 *
+		 * 	Hey, you are using ##navigator.userAgent## - how about that.
+		 * 	
+		 *	As a convention, leave the elements visibility:hidden until
+		 *	you run this to avoid exposing the raw code.
 		 * }}
 		 */
 		$(sel).each(function (f) {
@@ -1674,35 +1683,33 @@ $cj.extra = {
 		return null;
 	},
 
-	download: (function(){
+	download: function(url){
 		/* {{ 
 		 * Description:
-		 *
+		 *	Opens a hidden iframe for a download dialog
 		 *
 		 * Usage:
-		 *
+		 *	$cj.extra.download(filename)
 		 *
 		 * Details:
-		 *
+		 *	filename (required): file to download
 		 *
 		 * Example:
-		 * 
-		 *
+		 * 	$cj.extra.download('http://example.com/reallycool.mp3');
 		 * }}
 		 */
-		var 	iframe;
+		var 	iframe = $("<iframe style=visibility:hidden></iframe>")
+				.appendTo(document.body)
+				.attr('src', url);
 
-		function init(){
-			if(!iframe) {
-				iframe = $("<iframe style=visibility:hidden></iframe").appendTo(document.body);
-			}
-		}
-
-		return function (url) {
-			init();
-			iframe.attr('src', url);
-		}
-	})(),	
+		// remove after 5 seconds.  The download window should have already appeared
+		// by then.  Otherwise we are in trouble.
+		//
+		// Also, this helps keep the dom clean
+		setTimeout(function(){
+			iframe.remove();
+		}, 5000);
+	},	
 
 	reload: function(){
 		/* {{ 
@@ -1724,17 +1731,25 @@ $cj.extra = {
 	newTab: (function () {
 		/* {{ 
 		 * Description:
-		 *
+		 *	Opens a URL in a new tab, avoiding popup blockers
 		 *
 		 * Usage:
-		 *
+		 *	$cj.extra.newTab.setUrl(url, options)
+		 *	$cj.extra.newTab.modify(options)
+		 *	$cj.extra.newTab.magic(url)
+		 *	$cj.extra.newTab.create()
 		 *
 		 * Details:
-		 *
+		 *	url (required): Location to go to
+		 *	options (optional): K/V list of get parameters to use
 		 *
 		 * Example:
-		 * 
+		 * 	$cj.extra.newTab.setUrl('http://google.com/search', {q: 'weather'});
+		 *	$cj.extra.newTab.create();
 		 *
+		 * 	Or:
+		 *
+		 * 	$cj.extra.newTab.magic('http://google.com');
 		 * }}
 		 */
 		var 	form, 
@@ -1742,7 +1757,7 @@ $cj.extra = {
 
 		function init() {
 			if(!form) {
-				form = $('<form id=newtab target=_blank method=get></form>').appendTo(document.body);
+				form = $('<form id=CJnt target=_blank method=get></form>').appendTo(document.body);
 			} 
 		}
 
@@ -1776,13 +1791,11 @@ $cj.extra = {
 
 				$cj.extra.newTab.setUrl(url, opts);
 
-				setTimeout(function () {
-					$cj.extra.newTab.create();
-				},1);
+				setTimeout($cj.extra.newTab.create,1);
 			},
 
 			create: function () {
-				document.getElementById('newtab').submit();
+				document.getElementById('CJnt').submit();
 			}
 		}
 	})()
