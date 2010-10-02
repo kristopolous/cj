@@ -599,7 +599,7 @@ $cj.txt = {
 		 * }}
 		 */
 		return (num + Math.pow(10, width)).toString().substr(1);
-	}
+	},
 
 	time: function (fmt) {
 		/* {{ 
