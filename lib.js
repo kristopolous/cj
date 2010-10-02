@@ -38,116 +38,7 @@ var $cj = {
 	// out:
 	// 	{a:'valA', b:'valB', c:'valC'}
 	//
-	objExtract: function (obj, fieldList) {
-		var 	ix,
-			field,
-			ret = {},
-			len = fieldList.length;
-		
-		for(ix = 0; ix < len; ix++) {
-			ret[fieldList[ix]] = obj[fieldList[ix]];
-		}
 
-		return ret;
-	},
-
-	arrayUnique: function(list) {
-		var	ix,
-			obj = {},
-			len = list.length;
-
-		for(ix = 0; ix < len; ix++) {
-			obj[list[ix]] = 0;
-		}
-
-		return $lib.objKeys(obj);
-	},
-
-	objKeys: function (obj) {
-		var	ret = [],
-			el;
-		
-		for(el in obj) {
-			ret.push(el);
-		}
-			
-		return ret;
-	},
-
-	objValues: function (obj) {
-		var	ret = [],
-			el;
-		
-		for(el in obj) {
-			ret.push(obj[el]);
-		}
-			
-		return ret;
-	},
-
-
-	objRemove: function (obj, fieldList) {
-		var 	ix,
-			field,
-			ret = new Object(obj),
-			len = fieldList.length;
-		
-		for(ix = 0; ix < len; ix++) {
-			field = fieldList[ix];
-
-			try{
-				delete ret[field];
-			} catch(ex){}
-		}
-
-		return ret;
-	},
-
-	objMerge: function() {
-		var 	args = Array.prototype.slice.call(arguments),
-			ret = args.shift(),
-			len = args.length,
-			tmp,
-			el,
-			ix;
-
-		for(ix = 0; ix < len; ix++) {
-			tmp = args[ix];
-
-			for(el in tmp) {
-				ret[el] = tmp[el];
-			}
-		}
-
-		return ret;
-	},
-
-	// Similar to the above routine but it
-	// it returns a bool if it's changed
-	objChanged: function(objNew, objOld) {
-		var 	el;
-
-		for(el in objNew) {
-			if(!el in objOld || objNew[el] != objOld[el]) {
-				return true;
-			}
-		}
-
-		for(el in objOld) {
-			if(!el in objNew) {
-				return true;
-			}
-		}
-
-		return false;
-	},
-
-	objCopy: function(to, from) {
-		to = {};
-		for(el in from) {
-			to[el] = from[el];
-		}
-	},
 
 	safeCall: function () {
 		var cback = {};
@@ -180,22 +71,6 @@ var $cj = {
 		}
 	},
 
-	// this is similar to 
-	// el.childNodes, but it takes care of the 
-	// #text that comes up from whitespace.
-	// It returns an array
-	children: function(el) {
-		var 	o = [], 
-			tmp = el.firstChild;
-	
-		do {
-			if(tmp.nodeName.charAt(0) != '#') {
-				o.push(tmp);
-			}
-		} while(tmp = tmp.nextSibling);
-
-		return o;
-	},
 
 	postParams: function(obj) {
 		var 	ret = {}, 
@@ -227,14 +102,6 @@ var $cj = {
 			}
 			cb();
 		}, 'text');
-	},
-
-	toggle: function(el){
-		if(el.checked) {
-			$("#" + el.className).css('display','block');
-		} else {
-			$("#" + el.className).css('display','none');
-		}
 	},
 
 	semaphore: (function(){
@@ -419,17 +286,384 @@ var $cj = {
 		}
 	})(),
 
-	obj2tuple: function(obj) {
-		var 	tuple = [],
-			ix = 0,
-			el;
-		
-		for(el in obj) {
-			tuple[ix] = [el, obj[el]];
-			ix++;
+
+
+	filler: function () {
+		$(".filler").each(function (f) {
+			this.innerHTML = this.innerHTML.replace(/##(.*?)##/g, function (str, p1) {
+				return eval(p1);
+			});
+			
+			this.style.visibility = 'visible';
+		});
+	},
+
+	onEnter: function (div, callback) {
+		$(div).keyup(function (e) {
+			var kc;
+
+			if (window.event) kc = window.event.keyCode;
+			else if (e) kc = e.which;
+			else return true;
+
+			if (kc == K.enter) {
+				callback.apply(this);
+			}
+
+			return true;
+		});
+	},
+	// takes a va_list and returns the first valid element
+	valid: function () {
+		var 	i, 
+			args = Array.prototype.slice.call(arguments);
+
+		for(i in args) {
+			if( (typeof (args[i]) !== 'undefined') && (args[i] !== null) ) {
+				return args[i];
+			}	
 		}
 
-		return tuple;
+		return "";
+	},
+
+
+	callback: function() {
+		var cbackMap = {},
+		    ix;
+
+		function ret_real(directive, func) {
+			if(!directive) {
+				return false;
+			}
+
+			if(! (directive in cbackMap) ) {
+				cbackMap[directive] = [];
+			}
+
+			cbackMap[directive].push(func);
+
+			return true;
+		}
+
+		function ret(directive, func) {
+			if(typeof directive == 'string' || typeof directive == 'number') {
+				ret_real(directive, func);
+			} else {
+				while(ret_real(directive.pop(), func));
+			}
+		}
+
+		ret.exec = function(pointer, directive, opts){
+			var ret = true;
+
+			if(directive in cbackMap) {
+				for(ix = 0; ix < cbackMap[directive].length; ix++) {
+					pointer.$directive = directive;
+					ret &= cbackMap[directive][ix].call(pointer, opts);
+				}
+			}
+
+			return ret;
+		}
+		return ret;
+	},
+
+	loadLibEx: (function() {
+		var // a wrapper div to hold our script tags
+			wrapper,
+
+			// wait 5 seconds to load the library
+			timeout = 5000,
+
+			// functions to be run if the library loads
+			callbackMap = {},
+
+			// functions to be run if the library fails to load
+			failureMap = {},
+
+			// a cache so we don't load the library more then once
+			existMap = {};
+		
+		var ret = function (file, callback, options) {
+
+			// Check to see if we have loaded this library before.
+			if(existMap[file])  {
+
+				// if so, we just fire the callback
+				callback();
+			}
+
+			// If this is our first time here, 
+			// we'll need to create the wrapper div
+			// and inject it into the document.body
+			if(!wrapper) {
+				wrapper = document.createElement('div');
+				wrapper.setAttribute('class', 'lazyloader');
+
+				document.body.appendChild(wrapper);
+			}
+
+			// We create the script tag to inject below.
+			// However, we don't load it quite yet.  If it loads
+			// too fast (unlikely), then our handlers won't be called.
+			//
+			// However, if we have too much overhead (very unlikely)
+			// then our failure case may be called when it wasn't really
+			// needed.  Either way, this justifies the injection at the
+			// last possible moment.
+			var script = document.createElement('script');
+			script.src = file;
+
+
+			// add the callback to a list, if applicable
+			if(! callbackMap[file]) {
+				callbackMap[file] = [];
+			}
+
+			callbackMap[file].push(callback);
+
+
+			// add the failure to a list, if applicable
+			if(options && options.failure) {
+
+				if(! failureMap[file]) {
+					failureMap[file] = [];
+
+					// We'll have timeout milliseconds to
+					// request and load the script.  I have a lenient
+					// default of 5 seconds.  You can put it as high
+					// or as low as you want, depending on use.  
+					//
+					// Or, as in the example, you may not feel obliged
+					// to specify failure cases at all, in which case,
+					// this doesn't apply.
+					//
+					// We drop the code path in here because we don't want to
+					// accidentally register the setTimeout function more then
+					// once.  Even if we do, we are detroying the failureMap,
+					// so this ought not be a problem.  
+					//
+					// However, Array.prototype.shift is unlikely to be necessarily
+					// atomic so it's best to avoid any potential resource issues that
+					// may arise as a result of some likely future browser bugs.
+					setTimeout(function() {
+
+						// Exit if the library has been loaded in this
+						// time period.
+						if(existMap[file]) {
+							delete failureMap[file];
+							return;
+						}
+
+						// execute the failure code in order
+						while(failureMap[file]) {
+							(failureMap[file].shift()) ();
+						}
+					}, timeout);
+				}
+
+				failureMap[file].push(options.failure);
+			}
+
+			// Here is where we inject into the DOM
+			wrapper.appendChild(script);
+		}
+
+		ret.fire = function(file) { 
+
+			// Cache the library as loaded
+			existMap[file] = true;
+
+			// Delete the fail callbacks.
+			// This is just a matter of memory
+			// management.
+			if(failureMap[file]) {
+				delete failureMap[file];
+			}
+
+			if(callbackMap[file]) {
+
+				// Execute the success code in order
+				while(callbackMap[file].length) {
+					(callbackMap[file].shift()) ();
+				}
+			}
+		}
+
+		return ret;
+	})(),
+
+};
+
+$cj.dom = function(o) {
+	var pub = {
+		$build: function (el, obj) {
+			var 	ix, 
+				len = obj.length, 
+				cur, 
+				ret;
+
+			for(ix = 0; ix < len; ix++) {
+				cur = obj[ix];
+
+				if(cur.length > 2) {
+					if(typeof cur[2] == 'string') {
+						ret = pub.$ap(el, cur[0], cur[1], cur[2]);
+						if(cur.length > 3) {
+							// recurse for children
+							// the FOURTH argument is the children
+							pub.$build(ret, cur[3]);
+						} 
+					} else { // children
+						ret = pub.$ap(el, cur[0], cur[1]);
+
+						// recurse for children
+						pub.$build(ret, cur[2]);
+					}
+				} else {
+					pub.$ap(el, cur[0], cur[1]);
+				}
+			}
+		},
+
+		$root: function (type, name, html) {
+			var tmp = document.createElement(type);
+
+			if(name) {
+				tmp.className = name;
+				this[name] = tmp;
+			}
+
+			if(html) {
+				tmp.innerHTML = html;
+			}
+		},
+
+		// this doesn't do the class creation ... it just
+		// creates the object
+		$simple: function (el, type, name, html) {
+			var tmp = el.appendChild(document.createElement(type));
+
+			if(name) {
+				// implicit scopes
+				var nameList = name.split('.');
+
+				scope = this;
+
+				for(;;) {
+					name = nameList.shift();
+
+					// check if there are more names
+					if(nameList.length > 0) {
+
+						// if so, create a scope
+						if( !(name in scope) ) {
+							scope[name] = {};
+						}
+
+						scope = scope[name];
+						continue;
+
+					} else if(name) {
+						if(name in scope) {
+							Gdb("build: " + name);
+						}
+
+						scope[name] = tmp;
+					} 
+
+					break;
+				}
+			}
+
+			if(html) {
+				tmp.innerHTML = html;
+			}
+
+			return tmp;
+		},
+		// this supports scopes...
+		$ap: function (el, type, name, html) {
+			var 	tmp = el.appendChild(document.createElement(type)),
+				scope;
+
+			if(name) {
+				// implicit scopes
+				var nameList = name.split('.');
+
+				// make the class name space separated for CSS ease
+				tmp.className = nameList[nameList.length - 1];
+
+				scope = this;
+
+				for(;;) {
+					name = nameList.shift();
+
+					// check if there are more names
+					if(nameList.length > 0) {
+						// if so, create a scope
+						if( !(name in scope) ) {
+							scope[name] = {};
+						}
+						scope = scope[name];
+
+						continue;
+
+					} else if(name) {
+						if(name in scope) {
+							Gdb("build: " + name);
+						}
+
+						scope[name] = tmp;
+					} 
+
+					break;
+				}
+			}
+
+			if(html) {
+				tmp.innerHTML = html;
+			}
+
+			return tmp;
+		},
+
+		$apTbl: function (el, tableName, nameList) {
+			var 	tr = document.createElement('tr'),
+				len = nameList.length;
+
+			pub.$ap(el, 'table', tableName);
+
+			for(var ix = 0; ix < len; ix++) {
+				pub.$ap(tr, 'td', nameList[ix]);
+			}
+
+			pub[tableName].appendChild(tr);
+		}
+	}
+
+	pub = $cj.obj.merge(o, pub);
+
+	return pub;
+};
+
+$cj.html = {
+	// this is similar to 
+	// el.childNodes, but it takes care of the 
+	// #text that comes up from whitespace.
+	// It returns an array
+	children: function(el) {
+		var 	o = [], 
+			tmp = el.firstChild;
+	
+		do {
+			if(tmp.nodeName.charAt(0) != '#') {
+				o.push(tmp);
+			}
+		} while(tmp = tmp.nextSibling);
+
+		return o;
 	},
 
 	//
@@ -615,272 +849,11 @@ var $cj = {
 		}
 
 		return '<table><tr>' + ret.join('</tr><tr>') + '</tr></table>';
-	},
+	}
+};
 
-	sObj: function (o) {
-		var 	ret = [], 
-			i;
-
-		for(i in o) {
-			ret.push(i);
-		}
-
-		return ret;
-	},
-
-	// tuples to dict, like python
-	dict: function(list) {
-		var 	map = {},
-			len = list.length,
-			ix = 0;
-
-		for(ix; ix < len; ix+=2) {
-			map[list[ix]] = list[ix + 1];
-		}
-
-		return map;
-	},
-
-	postfix: function (n) {
-		var table = [
-			"st", 
-			"nd", 
-			"rd"];
-
-		if(n > table.length) { 
-			return n + 'th';
-		} else {
-			return n + table[n - 1];
-		}
-	},
-	filler: function () {
-		$(".filler").each(function (f) {
-			this.innerHTML = this.innerHTML.replace(/##(.*?)##/g, function (str, p1) {
-				return eval(p1);
-			});
-			
-			this.style.visibility = 'visible';
-		});
-	},
-
-	plural: function (w) {
-		if(w[w.length - 1] == 's') {
-			return w + "'";
-		} else {
-			return w + "'s";
-		}
-	},
-	onEnter: function (div, callback) {
-		$(div).keyup(function (e) {
-			var kc;
-
-			if (window.event) kc = window.event.keyCode;
-			else if (e) kc = e.which;
-			else return true;
-
-			if (kc == K.enter) {
-				callback.apply(this);
-			}
-
-			return true;
-		});
-	},
-	// takes a va_list and returns the first valid element
-	valid: function () {
-		var 	i, 
-			args = Array.prototype.slice.call(arguments);
-
-		for(i in args) {
-			if( (typeof (args[i]) !== 'undefined') && (args[i] !== null) ) {
-				return args[i];
-			}	
-		}
-
-		return "";
-	},
-
-	plainText: function(f) {
-		if(f && f.replace) {
-			f = f.replace(/<[^>]*>/g, '');
-			// swap out the newlines to preserve them
-			f = f.replace(/\n/g, '<br>');
-				f = f.replace(/\s+/g, ' ');
-				f = f.replace(/^\s*/, '');
-				f = f.replace(/\s*$/, '');
-			f = f.replace(/<br>/g, '\n');
-		} else {
-			return '';
-		}
-
-		return f;
-	},
-
-	callback: function() {
-		var cbackMap = {},
-		    ix;
-
-		function ret_real(directive, func) {
-			if(!directive) {
-				return false;
-			}
-
-			if(! (directive in cbackMap) ) {
-				cbackMap[directive] = [];
-			}
-
-			cbackMap[directive].push(func);
-
-			return true;
-		}
-
-		function ret(directive, func) {
-			if(typeof directive == 'string' || typeof directive == 'number') {
-				ret_real(directive, func);
-			} else {
-				while(ret_real(directive.pop(), func));
-			}
-		}
-
-		ret.exec = function(pointer, directive, opts){
-			var ret = true;
-
-			if(directive in cbackMap) {
-				for(ix = 0; ix < cbackMap[directive].length; ix++) {
-					pointer.$directive = directive;
-					ret &= cbackMap[directive][ix].call(pointer, opts);
-				}
-			}
-
-			return ret;
-		}
-		return ret;
-	},
-
-	loadLibEx: (function() {
-		var // a wrapper div to hold our script tags
-			wrapper,
-
-			// wait 5 seconds to load the library
-			timeout = 5000,
-
-			// functions to be run if the library loads
-			callbackMap = {},
-
-			// functions to be run if the library fails to load
-			failureMap = {},
-
-			// a cache so we don't load the library more then once
-			existMap = {};
-		
-		var ret = function (file, callback, options) {
-
-			// Check to see if we have loaded this library before.
-			if(existMap[file])  {
-
-				// if so, we just fire the callback
-				callback();
-			}
-
-			// If this is our first time here, 
-			// we'll need to create the wrapper div
-			// and inject it into the document.body
-			if(!wrapper) {
-				wrapper = document.createElement('div');
-				wrapper.setAttribute('class', 'lazyloader');
-
-				document.body.appendChild(wrapper);
-			}
-
-			// We create the script tag to inject below.
-			// However, we don't load it quite yet.  If it loads
-			// too fast (unlikely), then our handlers won't be called.
-			//
-			// However, if we have too much overhead (very unlikely)
-			// then our failure case may be called when it wasn't really
-			// needed.  Either way, this justifies the injection at the
-			// last possible moment.
-			var script = document.createElement('script');
-			script.src = file;
-
-
-			// add the callback to a list, if applicable
-			if(! callbackMap[file]) {
-				callbackMap[file] = [];
-			}
-
-			callbackMap[file].push(callback);
-
-
-			// add the failure to a list, if applicable
-			if(options && options.failure) {
-
-				if(! failureMap[file]) {
-					failureMap[file] = [];
-
-					// We'll have timeout milliseconds to
-					// request and load the script.  I have a lenient
-					// default of 5 seconds.  You can put it as high
-					// or as low as you want, depending on use.  
-					//
-					// Or, as in the example, you may not feel obliged
-					// to specify failure cases at all, in which case,
-					// this doesn't apply.
-					//
-					// We drop the code path in here because we don't want to
-					// accidentally register the setTimeout function more then
-					// once.  Even if we do, we are detroying the failureMap,
-					// so this ought not be a problem.  
-					//
-					// However, Array.prototype.shift is unlikely to be necessarily
-					// atomic so it's best to avoid any potential resource issues that
-					// may arise as a result of some likely future browser bugs.
-					setTimeout(function() {
-
-						// Exit if the library has been loaded in this
-						// time period.
-						if(existMap[file]) {
-							delete failureMap[file];
-							return;
-						}
-
-						// execute the failure code in order
-						while(failureMap[file]) {
-							(failureMap[file].shift()) ();
-						}
-					}, timeout);
-				}
-
-				failureMap[file].push(options.failure);
-			}
-
-			// Here is where we inject into the DOM
-			wrapper.appendChild(script);
-		}
-
-		ret.fire = function(file) { 
-
-			// Cache the library as loaded
-			existMap[file] = true;
-
-			// Delete the fail callbacks.
-			// This is just a matter of memory
-			// management.
-			if(failureMap[file]) {
-				delete failureMap[file];
-			}
-
-			if(callbackMap[file]) {
-
-				// Execute the success code in order
-				while(callbackMap[file].length) {
-					(callbackMap[file].shift()) ();
-				}
-			}
-		}
-
-		return ret;
-	})(),
-
+// text library
+$cj.txt = {
 	// nice decoding thing that handles UTF8, \' and UTF16
 	utf8: function (d) {
 		if(!d) {
@@ -901,164 +874,44 @@ var $cj = {
 		return f;
 	},
 
-	GezObj: function(o) {
-		var pub = {
-			$build: function (el, obj) {
-				var 	ix, 
-					len = obj.length, 
-					cur, 
-					ret;
-
-				for(ix = 0; ix < len; ix++) {
-					cur = obj[ix];
-
-					if(cur.length > 2) {
-						if(typeof cur[2] == 'string') {
-							ret = pub.$ap(el, cur[0], cur[1], cur[2]);
-							if(cur.length > 3) {
-								// recurse for children
-								// the FOURTH argument is the children
-								pub.$build(ret, cur[3]);
-							} 
-						} else { // children
-							ret = pub.$ap(el, cur[0], cur[1]);
-
-							// recurse for children
-							pub.$build(ret, cur[2]);
-						}
-					} else {
-						pub.$ap(el, cur[0], cur[1]);
-					}
-				}
-			},
-
-			$root: function (type, name, html) {
-				var tmp = document.createElement(type);
-
-				if(name) {
-					tmp.className = name;
-					this[name] = tmp;
-				}
-
-				if(html) {
-					tmp.innerHTML = html;
-				}
-			},
-
-			// this doesn't do the class creation ... it just
-			// creates the object
-			$simple: function (el, type, name, html) {
-				var tmp = el.appendChild(document.createElement(type));
-
-				if(name) {
-					// implicit scopes
-					var nameList = name.split('.');
-
-					scope = this;
-
-					for(;;) {
-						name = nameList.shift();
-
-						// check if there are more names
-						if(nameList.length > 0) {
-
-							// if so, create a scope
-							if( !(name in scope) ) {
-								scope[name] = {};
-							}
-
-							scope = scope[name];
-							continue;
-
-						} else if(name) {
-							if(name in scope) {
-								Gdb("build: " + name);
-							}
-
-							scope[name] = tmp;
-						} 
-
-						break;
-					}
-				}
-
-				if(html) {
-					tmp.innerHTML = html;
-				}
-
-				return tmp;
-			},
-			// this supports scopes...
-			$ap: function (el, type, name, html) {
-				var 	tmp = el.appendChild(document.createElement(type)),
-					scope;
-
-				if(name) {
-					// implicit scopes
-					var nameList = name.split('.');
-
-					// make the class name space separated for CSS ease
-					tmp.className = nameList[nameList.length - 1];
-
-					scope = this;
-
-					for(;;) {
-						name = nameList.shift();
-
-						// check if there are more names
-						if(nameList.length > 0) {
-							// if so, create a scope
-							if( !(name in scope) ) {
-								scope[name] = {};
-							}
-							scope = scope[name];
-
-							continue;
-
-						} else if(name) {
-							if(name in scope) {
-								Gdb("build: " + name);
-							}
-
-							scope[name] = tmp;
-						} 
-
-						break;
-					}
-				}
-
-				if(html) {
-					tmp.innerHTML = html;
-				}
-
-				return tmp;
-			},
-
-			$apTbl: function (el, tableName, nameList) {
-				var 	ix = 0,
-					tr = document.createElement('tr'),
-					len = nameList.length;
-
-				pub.$ap(el, 'table', tableName);
-
-				for(; ix < len; ix++) {
-					pub.$ap(tr, 'td', nameList[ix]);
-				}
-
-				pub[tableName].appendChild(tr);
-			}
+	plain: function(f) {
+		if(f && f.replace) {
+			f = f.replace(/<[^>]*>/g, '');
+			// swap out the newlines to preserve them
+			f = f.replace(/\n/g, '<br>');
+				f = f.replace(/\s+/g, ' ');
+				f = f.replace(/^\s*/, '');
+				f = f.replace(/\s*$/, '');
+			f = f.replace(/<br>/g, '\n');
+		} else {
+			return '';
 		}
 
-		// merge
-		if(o) {
-			for(n in o) {
-				pub[n] = o[n];
-			}
-		}
+		return f;
+	},
 
-		return pub;
-	}
+	plural: function (w) {
+		if(w[w.length - 1] == 's') {
+			return w + "'";
+		} else {
+			return w + "'s";
+		}
+	},
+
+	postfix: function (n) {
+		var table = [
+			"st", 
+			"nd", 
+			"rd"];
+
+		if(n > table.length) { 
+			return n + 'th';
+		} else {
+			return n + table[n - 1];
+		}
+	},
 };
+
 
 // the global event model
 // Lots of functionality was cut out (like the ability to deregister)
@@ -1429,3 +1282,131 @@ $cj.ev.fHandle = 0;
 // and the even cross reference, which stores the namespaces
 $cj.ev.fMap = {};
 
+$cj.list = {
+	obj: function(list) {
+		var 	map = {},
+			len = list.length;
+
+		for(var ix; ix < len; ix+=2) {
+			map[list[ix]] = list[ix + 1];
+		}
+
+		return map;
+	}
+
+	unique: function(list) {
+		var	obj = {},
+			len = list.length;
+
+		for(var ix = 0; ix < len; ix++) {
+			obj[list[ix]] = 0;
+		}
+
+		return $cj.obj.keys(obj);
+	}
+};
+
+$cj.obj = {
+	extract: function (obj, fieldList) {
+		var 	field,
+			ret = {},
+			len = fieldList.length;
+		
+		for(var ix = 0; ix < len; ix++) {
+			ret[fieldList[ix]] = obj[fieldList[ix]];
+		}
+
+		return ret;
+	},
+
+	keys: function (obj) {
+		var	ret = [];
+		
+		for(var el in obj) {
+			ret.push(el);
+		}
+			
+		return ret;
+	},
+
+	values: function (obj) {
+		var	ret = [];
+		
+		for(var el in obj) {
+			ret.push(obj[el]);
+		}
+			
+		return ret;
+	},
+
+	remove: function (obj, fieldList) {
+		var 	field,
+			ret = new Object(obj),
+			len = fieldList.length;
+		
+		for(var ix = 0; ix < len; ix++) {
+			field = fieldList[ix];
+
+			try {
+				delete ret[field];
+			} catch(ex){}
+		}
+
+		return ret;
+	},
+
+	merge: function() {
+		var 	args = Array.prototype.slice.call(arguments),
+			ret = args.shift(),
+			len = args.length,
+			tmp;
+
+		for(var ix = 0; ix < len; ix++) {
+			tmp = args[ix];
+
+			for(var el in tmp) {
+				ret[el] = tmp[el];
+			}
+		}
+
+		return ret;
+	},
+
+	// Similar to the above routine but it
+	// it returns a bool if it's changed
+	changed: function(objNew, objOld) {
+		for(var el in objNew) {
+			if(!el in objOld || objNew[el] != objOld[el]) {
+				return true;
+			}
+		}
+
+		for(el in objOld) {
+			if(!el in objNew) {
+				return true;
+			}
+		}
+
+		return false;
+	},
+
+	copy: function(to, from) {
+		to = {};
+
+		for(var el in from) {
+			to[el] = from[el];
+		}
+	},
+
+	list: function(obj) {
+		var 	tuple = [],
+			ix = 0;
+		
+		for(var el in obj) {
+			tuple[ix] = [el, obj[el]];
+			ix++;
+		}
+
+		return tuple;
+	}
+};
