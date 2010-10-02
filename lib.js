@@ -90,7 +90,7 @@ $cj.async = {
 			if(typeof directive == 'string' || typeof directive == 'number') {
 				ret_real(directive, func);
 			} else {
-				while(ret_real(directive.pop(), func));
+				while(ret_real(directive.pop(), func)) {};
 			}
 		}
 
@@ -1106,7 +1106,7 @@ $cj.ev = (function (nameIn) {
 	}
 	    
 	return pub;
-})();
+})(null);
 // the cross reference for enabling and disabling of functions is a global map
 $cj.ev.xRefMap = {};
 
