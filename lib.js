@@ -1774,10 +1774,10 @@ $cj.extra = {
 					opts[optList[ix]] = optList[ix + 1];
 				}
 
-				$cj.newTab.setUrl(url, opts);
+				$cj.extra.newTab.setUrl(url, opts);
 
 				setTimeout(function () {
-					$lib.newTab.create();
+					$cj.extra.newTab.create();
 				},1);
 			},
 
