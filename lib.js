@@ -628,7 +628,7 @@ $cj.txt = {
 		var d = new Date(),
 		    t = {
 			Y: d.getFullYear(),
-			M: $cj.txt.padLeft(d.getMonth() + 1), 2),
+			M: $cj.txt.padLeft((d.getMonth() + 1), 2),
 			D: $cj.txt.padLeft(d.getDate(), 2),
 			H: ( ((d.getHours() + 1) % 12) - 1),
 			h: $cj.txt.padLeft(d.getHours(), 2),
