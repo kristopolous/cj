@@ -3,10 +3,10 @@
  *   http://github.com/kristopolous/cj
  *   
  *   Copyright 2010, Chris McKenzie
- *    Dual licensed under the MIT or GPL Version 2 licenses.
+ *   Dual licensed under the MIT or GPL Version 2 licenses.
  *
  * Requires:
- * 	Jquery
+ *   Jquery
  */
 
 
@@ -1160,7 +1160,7 @@ $cj.list = {
 		}
 
 		return map;
-	}
+	},
 
 	unique: function(list) {
 		/* {{ 
