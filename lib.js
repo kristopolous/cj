@@ -4,18 +4,10 @@
  *   
  *   Copyright 2010, Chris McKenzie
  *    Dual licensed under the MIT or GPL Version 2 licenses.
+ *
+ * Requires:
+ * 	Jquery
  */
-
-var VARTABLE = {
-	name: {},
-	text: {}
-},
-    TYPE = {
-	"INPUT": 1,
-	"TEXTAREA": 2,
-	"DATE": 3,
-	"NUMBER": 4
-};
 
 String.prototype.trim = function() {
 	return this.replace(/^\s*/g, "")
@@ -25,21 +17,6 @@ Number.prototype.padLeft = function(m){
 }
 
 var $cj = {
-	// in:
-	// 	obj such as {
-	// 		a: valA,
-	// 		b: valB,
-	// 		...
-	// 		z: valz
-	// 	}
-	//
-	// 	fieldList such as 
-	// 		['a', 'b', 'c']
-	// out:
-	// 	{a:'valA', b:'valB', c:'valC'}
-	//
-
-
 	safeCall: function () {
 		var cback = {};
 
@@ -69,39 +46,6 @@ var $cj = {
 
 			return cback;
 		}
-	},
-
-
-	postParams: function(obj) {
-		var 	ret = {}, 
-			el;
-
-		for(el in obj) {
-			ret[el] = JSON.stringify(obj[el]);
-		}
-
-		return ret;
-	},
-
-	lcaseSort: function (a, b) {
-		return a.toLowerCase() > b.toLowerCase();
-	},
-
-	loadJson: function (file, cb) {
-		busy.start();
-
-		$.get(file, function(f) {
-			busy.end();
-			var ref = this.url.split('.')[0];
-
-			try{
-				eval("self." + ref + " = " + f);
-				after.exec(this, ref);
-			} catch (ex){
-				alert([this.url, ex, f].join());
-			}
-			cb();
-		}, 'text');
 	},
 
 	semaphore: (function(){
@@ -211,7 +155,7 @@ var $cj = {
 		return null;
 	},
 
-	dlHack: (function(){
+	download: (function(){
 		var 	iframe;
 
 		function init(){
@@ -221,12 +165,10 @@ var $cj = {
 			}
 		}
 
-		function ret(url) {
+		return function (url) {
 			init();
 			iframe.attr('src', url);
 		}
-
-		return ret;
 	})(),	
 
 	reload: function(){
@@ -245,7 +187,7 @@ var $cj = {
 		}
 
 		function modify(o) {
-			for(k in o) {
+			for(var k in o) {
 				form.append('<input name="' + k + '" value="' + o[k] + '">');
 			}
 		}
@@ -273,7 +215,7 @@ var $cj = {
 					opts[optList[ix]] = optList[ix + 1];
 				}
 
-				$lib.newTab.setUrl(url, opts);
+				$cj.newTab.setUrl(url, opts);
 
 				setTimeout(function () {
 					$lib.newTab.create();
@@ -285,18 +227,6 @@ var $cj = {
 			}
 		}
 	})(),
-
-
-
-	filler: function () {
-		$(".filler").each(function (f) {
-			this.innerHTML = this.innerHTML.replace(/##(.*?)##/g, function (str, p1) {
-				return eval(p1);
-			});
-			
-			this.style.visibility = 'visible';
-		});
-	},
 
 	onEnter: function (div, callback) {
 		$(div).keyup(function (e) {
@@ -313,20 +243,6 @@ var $cj = {
 			return true;
 		});
 	},
-	// takes a va_list and returns the first valid element
-	valid: function () {
-		var 	i, 
-			args = Array.prototype.slice.call(arguments);
-
-		for(i in args) {
-			if( (typeof (args[i]) !== 'undefined') && (args[i] !== null) ) {
-				return args[i];
-			}	
-		}
-
-		return "";
-	},
-
 
 	callback: function() {
 		var cbackMap = {},
@@ -369,7 +285,7 @@ var $cj = {
 		return ret;
 	},
 
-	loadLibEx: (function() {
+	loadLibrary: (function() {
 		var // a wrapper div to hold our script tags
 			wrapper,
 
@@ -492,19 +408,17 @@ var $cj = {
 		}
 
 		return ret;
-	})(),
-
+	})()
 };
 
 $cj.dom = function(o) {
 	var pub = {
 		$build: function (el, obj) {
-			var 	ix, 
-				len = obj.length, 
+			var 	len = obj.length, 
 				cur, 
 				ret;
 
-			for(ix = 0; ix < len; ix++) {
+			for(var ix = 0; ix < len; ix++) {
 				cur = obj[ix];
 
 				if(cur.length > 2) {
@@ -648,210 +562,6 @@ $cj.dom = function(o) {
 	return pub;
 };
 
-$cj.html = {
-	// this is similar to 
-	// el.childNodes, but it takes care of the 
-	// #text that comes up from whitespace.
-	// It returns an array
-	children: function(el) {
-		var 	o = [], 
-			tmp = el.firstChild;
-	
-		do {
-			if(tmp.nodeName.charAt(0) != '#') {
-				o.push(tmp);
-			}
-		} while(tmp = tmp.nextSibling);
-
-		return o;
-	},
-
-	//
-	// Goes into DOM and looks for objects with classnames in fieldList
-	//
-	grabValues: function(DOM, fieldList) {
-		var data = {},
-		    ix,
-		    len = fieldList.length,
-		    field;
-
-		for(ix = 0; ix < len; ix++) {
-			field = fieldList[ix];
-			$("." + field, DOM).each(function(){
-				var ret = [];
-
-				switch(this.nodeName) {
-					case "B":
-						data[field] = $(this).html();
-						break;
-
-					case "INPUT":
-						if(this.getAttribute('type') == 'checkbox') {
-							if(this.checked) {
-								data[field] = this.checked;
-							}
-						} else {
-							data[field] = $(this).val();
-						}
-
-						break;
-
-					case "TEXTAREA":
-						data[field] = $(this).val();
-						break;
-
-					case "SELECT":
-						var str = this.childNodes.item(this.selectedIndex + 1).innerHTML;
-
-						if(str.charAt(0).match(/[0-9]/)) {
-							data[field] = str;
-						} else {
-							data[field] = this.selectedIndex;
-						}
-
-						break;
-						
-					case "SPAN":
-						$("input", this).each(function(){
-							if(this.checked) {
-								data[field] = this.value;
-							}
-						});	
-						break;
-
-					case "DIV":
-						//
-						// we need to take the expanded fields and then
-						// collapse them again into the comma separated
-						// list in order to do the post back
-						//
-						$("input", this).each(function(){
-							ret.push('"' + this.value.replace(/\"/g, "\\\"") + '"');
-						});
-
-						data[field] = '[' + ret.join() + ']';
-
-						break;
-				}
-			});
-		}
-
-		return data;
-	},
-
-	// input:
-	//  ["term1", "term2", ... "termN"]
-	// output:
-	//  <input class="term1"></input>
-	//  <input class="term2"></input>
-	//  ...
-	//  <input class="termN"></input>
-	emitInput: function(termList) {
-		var	ret = [],
-			input,
-			ix,
-			text,
-			term,
-			type,
-			varTable = VARTABLE.name,
-			len = termList.length;
-
-		for(ix = 0; ix < len; ix++) {
-			term = termList[ix];
-			try{
-				type = varTable[term].type;
-			} catch(ex) {
-				alert(term + " is not defined! Please add this now!");
-				$template.varNew(term);
-			}
-			text = '<span>' + varTable[term].text + '</span>';
-
-			if(type == TYPE['INPUT']) {
-				input = '<input type=text class="' + term + '"></input>';
-
-			} else if(type == TYPE['TEXTAREA']) {
-				input = '<textarea class="' + term + '"></textarea>';
-
-			} else if(type == TYPE['DATE']) {
-				input = '<input type=text class="' + term + ' date"></input>';
-
-			} else if(type == TYPE['NUMBER']) {
-				input = '<input type=text class="' + term + ' number"></input>';
-			}
-
-			ret.push(text + input);
-		}
-
-		return ret.join('<br>');
-	},
-
-	emitTuple: function(tuple, opts) {
-		var 	ret = [],
-			tmp,
-			newlinecount,
-			o,
-			type,
-			cb = [''],
-			className,
-			len = tuple.length,
-			ix = 0;
-
-		if(!opts) {
-			for(;ix < len; ix++) {
-				ret[ix] ='<td>' + tuple[ix][0] + '</td>' +
-					'<td>' + tuple[ix][1] + '</td>';
-			}
-		} else {
-			for(o in opts) {
-				if(o.substr(0, 2) == 'on') {
-					cb.push(o + '="' + opts[o] + '"');
-				}
-			}
-
-			cb = cb.join(' ');
-
-			// make it boxes that can be modified
-			if(opts.editable) {
-				for(;ix < len; ix++) {
-					tmp = tuple[ix];
-					className = tmp[0].toLowerCase();
-					
-					tmp[1] = tmp[1].replace(/<br>/g, '\n');
-
-					newlinecount = tmp[1].split(/\n/).length;
-
-					if(newlinecount > 1 || 
-						(VARTABLE.name[className] && 
-						 VARTABLE.name[className].type == TYPE.TEXTAREA) 
-					){
-						tmp[1] = '<textarea ' + [
-								'class=' + className,
-								cb,
-								'rows=' + Math.min(15, newlinecount + 1)
-							].join(' ') + '>' + 
-							tmp[1] + '</textarea>';
-					} else {
-						// replace " with 0d34
-						tmp[1] = [
-							'<input',
-								'type=text',
-								'class=' + className,
-								cb,
-								'value="' + tmp[1].replace(/'"'/, '&#34;') + '"',
-							'>'
-						].join(' ');
-					}
-
-					ret[ix] = '<td>' + tmp[0] + '</td>' +
-						  '<td>' + tmp[1] + '</td>';
-				}
-			}
-		}
-
-		return '<table><tr>' + ret.join('</tr><tr>') + '</tr></table>';
-	}
-};
-
 // text library
 $cj.txt = {
 	// nice decoding thing that handles UTF8, \' and UTF16
@@ -899,17 +609,14 @@ $cj.txt = {
 	},
 
 	postfix: function (n) {
-		var table = [
-			"st", 
-			"nd", 
-			"rd"];
+		var table = [ "st", "nd", "rd"];
 
 		if(n > table.length) { 
 			return n + 'th';
 		} else {
 			return n + table[n - 1];
 		}
-	},
+	}
 };
 
 
@@ -1408,5 +1115,55 @@ $cj.obj = {
 		}
 
 		return tuple;
+	}
+};
+
+$cj.extra = {
+	// takes a va_list and returns the first valid element
+	valid: function () {
+		var 	i, 
+			args = Array.prototype.slice.call(arguments);
+
+		for(i in args) {
+			if( (typeof (args[i]) !== 'undefined') && (args[i] !== null) ) {
+				return args[i];
+			}	
+		}
+
+		return "";
+	},
+
+	postParams: function(obj) {
+		var 	ret = {}, 
+			el;
+
+		for(el in obj) {
+			ret[el] = JSON.stringify(obj[el]);
+		}
+
+		return ret;
+	},
+
+	loadJson: function (file, cb) {
+		$.get(file, function(f) {
+			var ref = this.url.split('.')[0];
+
+			try{
+				eval("self." + ref + " = " + f);
+			} catch (ex){
+				alert([this.url, ex, f].join());
+			}
+			cb();
+		}, 'text');
+	},
+
+	filler: function (sel) {
+		$(sel).each(function (f) {
+			this.innerHTML = this.innerHTML.replace(/##(.*?)##/g, function (str, p1) {
+				return eval(p1);
+			});
+			
+			this.style.visibility = 'visible';
+		});
 	}
 };
