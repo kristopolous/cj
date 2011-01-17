@@ -382,9 +382,28 @@ $cj.dom = function(o) {
 	 * 	TODO
 	 * }}
 	 */
+	function create(type){
+		try{
+			var tmp = document.createElement(type);
+		} catch(ex){
+			Gdb(type);
+			Gdb.stack();
+		}
+
+		if(pub.genid) {
+			tmp.id = ['gezobj',G.iter()].join('-');
+		}
+
+		return tmp;
+	}
 	var pub = {
 		el: {},
 		build: function (el, obj) {
+			if(!obj) {
+				obj = el;
+				el = pub.root();
+			}
+
 			var 	len = obj.length, 
 				cur, 
 				ret;
@@ -411,25 +430,29 @@ $cj.dom = function(o) {
 					pub.ap(el, cur[0], cur[1]);
 				}
 			}
+			return el;
 		},
 
 		root: function (type, name, html) {
-			var tmp = document.createElement(type);
+			var tmp = create(type || 'div');
 
 			if(name) {
 				tmp.className = name;
 				this.el[name] = tmp;
+			} else {
+				this.el.root = tmp;
 			}
 
 			if(html) {
 				tmp.innerHTML = html;
 			}
+			return tmp;
 		},
 
 		// this doesn't do the class creation ... it just
 		// creates the object
 		simple: function (el, type, name, html) {
-			var tmp = el.appendChild(document.createElement(type));
+			var tmp = el.appendChild(create(type));
 
 			if(name) {
 				// implicit scopes
@@ -472,7 +495,7 @@ $cj.dom = function(o) {
 
 		// this supports scopes...
 		ap: function (el, type, name, html) {
-			var 	tmp = el.appendChild(document.createElement(type)),
+			var 	tmp = el.appendChild(create(type)),
 				scope;
 
 			if(name) {
@@ -517,7 +540,7 @@ $cj.dom = function(o) {
 		},
 
 		apTbl: function (el, tableName, nameList) {
-			var 	tr = document.createElement('tr'),
+			var 	tr = create('tr'),
 				len = nameList.length;
 
 			pub.ap(el, 'table', tableName);
@@ -527,7 +550,33 @@ $cj.dom = function(o) {
 			}
 
 			pub.el[tableName].appendChild(tr);
-		}
+		},
+
+    // unrelated dom functions
+    create: function(opts) {
+      var el = document.createElement(opts.type);
+      if (opts.attr) {
+        $cj.attr(el, opts.attr);
+      }
+      if (opts.css) {
+        $cj.css(el, opts.css);
+      }
+      return el;
+    },
+
+    attr: function(dom, attrList) {
+      for (var key in attrList) {
+        dom.setAttribute(key, attrList[key]);
+      }
+      return dom;
+    },
+
+    css: function(dom, attrList) {
+      for (var key in attrList) {
+        dom.style [key] = attrList[key];
+      }
+      return dom;
+    }
 	}
 
 	pub = $cj.obj.merge(o, pub);
@@ -717,6 +766,14 @@ $cj.txt = {
 };
 
 $cj.list = {
+  add: function(key, value) {
+    if (! (value in key) ) {
+      key[value] = [];
+    }
+    return function(param) {
+      key[value] = key[value].concat(param);
+    }
+  },
 	obj: function(list) {
 		/* {{ 
 		 * Description:
@@ -753,12 +810,21 @@ $cj.list = {
 		var 	map = {},
 			len = list.length;
 
-		for(var ix; ix < len; ix+=2) {
+		for(var ix = 0; ix < len; ix += 2) {
 			map[list[ix]] = list[ix + 1];
 		}
 
 		return map;
 	},
+
+	fromString: function(toCheck, delim) {
+		if(toCheck instanceof Array) {
+			return toCheck;
+		} else {
+			return toCheck.split(delim || ',');
+		}
+	},
+
 
 	unique: function(list) {
 		/* {{ 
@@ -789,6 +855,26 @@ $cj.list = {
 };
 
 $cj.obj = {
+  // use an object as a bitmap set of flags
+  set: function(key, value) {
+    key[value] = true;
+    return value;
+  },
+  
+  inc: function(key, value) {
+    if(value in key) {
+      key[value]++;
+    } else {
+      key[value] = 1;
+    }
+  },
+
+  create: function(key, value) {
+     if(! (value in key) ){
+       key[value] = {};
+     }
+     return key[value];
+  },
 	extract: function (obj, fieldList) {
 		/* {{ 
 		 * Description:
@@ -1013,6 +1099,7 @@ $cj.obj = {
 		return ret;
 	},
 
+
 	changed: function(obj1, obj2) {
 		/* {{ 
 		 * Description:
@@ -1063,7 +1150,7 @@ $cj.obj = {
 		 */
 		var copy = {};
 
-		for(var el in from) {
+		for(var el in obj) {
 			copy[el] = obj[el];
 		}
 
@@ -1107,6 +1194,20 @@ $cj.obj = {
 		}
 
 		return tuple;
+	},
+
+	// make a list iterable
+	fromList: function(list) {
+		list = $cj.list.fromString(list);
+
+		var 	len = list.length,
+			map = {};
+		
+		for(var ix = 0; ix < len; ix++) {
+			map[list[ix]] = true;
+		}
+
+		return map;
 	},
 
 	list: function(obj) {
@@ -1304,8 +1405,8 @@ $cj.ev = (function (nameIn) {
 		var handle = pub.register(ev, func, opts);
 
 		// now we remove it from the map and the list
-		delete fList[handle];
-		delete fMap[handle];
+		delete $cj.ev.fList[handle];
+		delete $cj.ev.fMap[handle];
 
 		// and add it to the one shot list
 		fOnceList[handle] = func;
@@ -1344,11 +1445,6 @@ $cj.ev = (function (nameIn) {
 			}
 			// find the offset of the function in the event list
 			offset = my_cb[ev].indexOf(handle);
-
-			if(offset == -1) {
-				G.err('error disabling ' + handle);
-				Gdb.stack();
-			}
 
 			// remove the function from the event list
 			my_cb[ev].splice(offset, 1);
@@ -1399,8 +1495,8 @@ $cj.ev = (function (nameIn) {
 		pub.disable(handle);
 
 		// remove the function from the map and list
-		delete fMap[handle];
-		delete fList[handle];
+		delete $cj.ev.fMap[handle];
+		delete $cj.ev.fList[handle];
 	}
 
 	// }
@@ -1411,8 +1507,6 @@ $cj.ev = (function (nameIn) {
 			removeList = [],
 			ret = [], 
 			tmp;
-
-		name.length > 0 && Gdb(name,ev) || Gdb(ev);
 
 		// make sure this event is register and not
 		// currently being fired
