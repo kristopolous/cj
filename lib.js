@@ -586,6 +586,10 @@ $cj.dom = function(o) {
 
 // text library
 $cj.txt = {
+  trim: function (str) {
+    return str.replace(/^\s+/,'').replace(/\s+$/,'');
+  },
+
 	utf8: function (d) {
 		/* {{ 
 		 * Description:
