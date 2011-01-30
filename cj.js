@@ -2,11 +2,8 @@
  * cj JavaScript Library
  *   http://github.com/kristopolous/cj
  *   
- *   Copyright 2010, Chris McKenzie
+ *   Copyright 2010, 2011, Chris McKenzie
  *   Dual licensed under the MIT or GPL Version 2 licenses.
- *
- * Requires:
- *   Jquery
  */
 
 var $cj = {};
