@@ -770,6 +770,13 @@ $cj.txt = {
 };
 
 $cj.list = {
+  each: function(list, cb) {
+    var len = list.length;
+    for(var ix = 0; ix < len; ix++) {
+      cb(list[ix]);
+    }
+  },
+
   add: function(key, value) {
     if (! (value in key) ) {
       key[value] = [];
@@ -778,6 +785,7 @@ $cj.list = {
       key[value] = key[value].concat(param);
     }
   },
+
 	obj: function(list) {
 		/* {{ 
 		 * Description:
@@ -828,7 +836,6 @@ $cj.list = {
 			return toCheck.split(delim || ',');
 		}
 	},
-
 
 	unique: function(list) {
 		/* {{ 
@@ -978,7 +985,6 @@ $cj.obj = {
 		return ret;
 	},
 
-
 	keys: function (obj) {
 		/* {{ 
 		 * Description:
@@ -1102,7 +1108,6 @@ $cj.obj = {
 
 		return ret;
 	},
-
 
 	changed: function(obj1, obj2) {
 		/* {{ 
