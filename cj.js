@@ -6,7 +6,10 @@
  *   Dual licensed under the MIT or GPL Version 2 licenses.
  */
 
-var $cj = {};
+// try to avoid polluting the global namespace
+if(! window.$cj) {
+  var $cj = {};
+}
 
 $cj.async = {
 	callback: function() {
