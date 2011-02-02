@@ -1647,7 +1647,7 @@ $cj.ev.fHandle = 0;
 // and the even cross reference, which stores the namespaces
 $cj.ev.fMap = {};
 
-$cj.extra = {
+$cj.obj.merge($cj, {
   create: function(opts) {
     var el = document.createElement(opts.type);
     if (opts.attr) {
@@ -1927,5 +1927,4 @@ $cj.extra = {
       }
     }
   })()
-};
-
+});
