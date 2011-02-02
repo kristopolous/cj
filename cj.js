@@ -1651,10 +1651,10 @@ $cj.obj.merge($cj, {
   create: function(opts) {
     var el = document.createElement(opts.type);
     if (opts.attr) {
-      $cj.extra.attr(el, opts.attr);
+      $cj.attr(el, opts.attr);
     }
     if (opts.css) {
-      $cj.extra.css(el, opts.css);
+      $cj.css(el, opts.css);
     }
     return el;
   },
@@ -1702,7 +1702,7 @@ $cj.obj.merge($cj, {
      *  Load a json object and apply it to self.
      *
      * Usage:
-     *  $cj.extra.loadJson(file, function)
+     *  $cj.loadJson(file, function)
      *
      * Details:
      *  file (required): File to load, such as "{a:1,b:2}"
@@ -1731,7 +1731,7 @@ $cj.obj.merge($cj, {
      *   Run a block of code when enter is pressed on a given element
      *
      * Usage:
-     *   $cj.extra.onEnter(selector, function)
+     *   $cj.onEnter(selector, function)
      *
      * Details:
      *   selector: Jquery selector
@@ -1760,7 +1760,7 @@ $cj.obj.merge($cj, {
      *  Simple templating library
      *
      * Usage:
-     *  $cj.extra.filler(sel)
+     *  $cj.filler(sel)
      *
      * Details:
      *  sel: Jquery Selector
@@ -1817,13 +1817,13 @@ $cj.obj.merge($cj, {
      *  Opens a hidden iframe for a download dialog
      *
      * Usage:
-     *  $cj.extra.download(filename)
+     *  $cj.download(filename)
      *
      * Details:
      *  filename (required): file to download
      *
      * Example:
-     *   $cj.extra.download('http://example.com/reallycool.mp3');
+     *   $cj.download('http://example.com/reallycool.mp3');
      * }}
      */
     var iframe = $("<iframe style=visibility:hidden></iframe>")
@@ -1845,7 +1845,7 @@ $cj.obj.merge($cj, {
      *  Forces a reload of a page
      *
      * Usage:
-     *  $cj.extra.reload()
+     *  $cj.reload()
      *
      * Details:
      *
@@ -1862,22 +1862,22 @@ $cj.obj.merge($cj, {
      *  Opens a URL in a new tab, avoiding popup blockers
      *
      * Usage:
-     *  $cj.extra.newTab.setUrl(url, options)
-     *  $cj.extra.newTab.modify(options)
-     *  $cj.extra.newTab.magic(url)
-     *  $cj.extra.newTab.create()
+     *  $cj.newTab.setUrl(url, options)
+     *  $cj.newTab.modify(options)
+     *  $cj.newTab.magic(url)
+     *  $cj.newTab.create()
      *
      * Details:
      *  url (required): Location to go to
      *  options (optional): K/V list of get parameters to use
      *
      * Example:
-     *   $cj.extra.newTab.setUrl('http://google.com/search', {q: 'weather'});
-     *  $cj.extra.newTab.create();
+     *   $cj.newTab.setUrl('http://google.com/search', {q: 'weather'});
+     *  $cj.newTab.create();
      *
      *   Or:
      *
-     *   $cj.extra.newTab.magic('http://google.com');
+     *   $cj.newTab.magic('http://google.com');
      * }}
      */
     var   form, 
@@ -1917,9 +1917,9 @@ $cj.obj.merge($cj, {
           opts[optList[ix]] = optList[ix + 1];
         }
 
-        $cj.extra.newTab.setUrl(url, opts);
+        $cj.newTab.setUrl(url, opts);
 
-        setTimeout($cj.extra.newTab.create,1);
+        setTimeout($cj.newTab.create,1);
       },
 
       create: function () {
