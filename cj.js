@@ -579,9 +579,7 @@ $cj.dom = function(o) {
     }
   }
 
-  pub = $cj.obj.merge(o, pub);
-
-  return pub;
+  return $cj.obj.merge(o || {}, pub);
 };
 
 // text library
