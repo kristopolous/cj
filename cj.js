@@ -920,13 +920,11 @@ $cj.obj = {
      *  But also keep obj unmodified.
      * }}
      */
-    var   field,
-      ret = {},
-      len = fieldList.length;
-    
-    for(var ix = 0; ix < len; ix++) {
-      ret[fieldList[ix]] = obj[fieldList[ix]];
-    }
+    var ret = {};
+
+    $cj.list.each(fieldList, function(field) {
+      ret[field] = obj[field];
+    });
 
     return ret;
   },
