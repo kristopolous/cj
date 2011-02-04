@@ -829,11 +829,10 @@ $cj.list = {
   },
 
   fromString: function(toCheck, delim) {
-    if(toCheck instanceof Array) {
-      return toCheck;
-    } else {
+    if('split' in toCheck) {
       return toCheck.split(delim || ',');
-    }
+    } 
+    return toCheck;
   },
 
   unique: function(list) {
