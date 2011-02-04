@@ -829,7 +829,7 @@ $cj.list = {
   },
 
   fromString: function(toCheck, delim) {
-    if('split' in toCheck) {
+    if(toCheck && (toCheck.split)) {
       return toCheck.split(delim || ',');
     } 
     return toCheck;
