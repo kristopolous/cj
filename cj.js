@@ -1156,7 +1156,11 @@ $cj.obj = {
     var copy = {};
 
     for(var el in obj) {
-      copy[el] = obj[el];
+      if(typeof obj[el] == 'object') {
+        copy[el] = $cj.obj.copy(obj[el]);
+      } else {
+        copy[el] = obj[el];
+      }
     }
 
     return copy;
