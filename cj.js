@@ -1156,7 +1156,7 @@ $cj.obj = {
     var copy = {};
 
     for(var el in obj) {
-      if(typeof obj[el] == 'object') {
+      if(typeof obj[el] == 'object' && !(obj[el] instanceof Array)) {
         copy[el] = $cj.obj.copy(obj[el]);
       } else {
         copy[el] = obj[el];
