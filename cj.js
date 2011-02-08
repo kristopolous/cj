@@ -771,8 +771,9 @@ $cj.list = {
   each: function(list, cb) {
     list = $cj.list.fromString(list);
     var len = list.length;
+
     for(var ix = 0; ix < len; ix++) {
-      cb(list[ix]);
+      cb(list[ix], ix);
     }
   },
 
