@@ -770,10 +770,15 @@ $cj.txt = {
 $cj.list = {
   each: function(list, cb) {
     list = $cj.list.fromString(list);
-    var len = list.length;
+    var len = list.length,
+        mythis = {
+          stop: function(){
+            ix = len + 1;
+          }
+        };
 
     for(var ix = 0; ix < len; ix++) {
-      cb(list[ix], ix);
+      cb.call(mythis, list[ix], ix);
     }
   },
 
