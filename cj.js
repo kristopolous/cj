@@ -116,6 +116,8 @@ $cj.async = {
      *
      * Usage:
      *   $cj.mutex.set (name)
+     *   $cj.mutex.unset (name)
+     *   $cj.mutex.isset (name)
      *   $cj.mutex.waitOn (name, function)
      *
      * Details:
@@ -160,6 +162,16 @@ $cj.async = {
       mutSet = {},
       mutFunc = {},
       cbList = {};
+
+    pub.unset = function(name) {
+      if(mutSet[name]) {
+        delete mutSet[name];
+      }
+    }
+
+    pub.isset = function(name) {
+      return mutSet[name];
+    }
 
     pub.set = function(name) {
       var   cbTmp, 
@@ -364,9 +376,9 @@ $cj.dom = function(o) {
    *   but quite useful
    *
    * Usage:
-   *   $cj.dom.el {}
-   *   $cj.dom.build (dom, obj)
-   *   (el) $cj.dom.root (type, name, html)
+   *  $cj.dom.el {}
+   *  $cj.dom.build (dom, obj)
+   *  (el) $cj.dom.root (type, name, html)
    *  (el) $cj.dom.simple (dom, type, name, html) 
    *  (el) $cj.dom.ap (dom, type, name, html) 
    *  (el) $cj.dom.apTbl (dom, tableName, list) 
