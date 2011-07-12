@@ -1844,16 +1844,27 @@ $cj.obj.merge($cj, {
      *   $cj.download('http://example.com/reallycool.mp3');
      * }}
      */
-    var iframe = $("<iframe style=visibility:hidden></iframe>")
-        .appendTo(document.body)
-        .attr('src', url);
+    var iframe = document.createElement('iframe');
+
+    iframe.setAttribute('style', [
+      'position:absolute',
+      'top:-10000px',
+      'left:-10000px',
+      'height:100px',
+      'width:100px',
+      'visibility:hidden'
+    ].join(';'));
+
+    iframe.setAttribute('src', url);
+
+    document.body.appendChild(iframe);
 
     // remove after 5 seconds.  The download window should have already appeared
     // by then.  Otherwise we are in trouble.
     //
     // Also, this helps keep the dom clean
     setTimeout(function(){
-      iframe.remove();
+      iframe.parentNode.removeChild(iframe);
     }, 5000);
   },  
 
