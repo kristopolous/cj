@@ -699,6 +699,7 @@ $cj.txt = {
         t = {
       Y: d.getFullYear(),
       M: $cj.txt.padLeft((d.getMonth() + 1), 2),
+      N: "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(' ')[d.getMonth()],
       D: $cj.txt.padLeft(d.getDate(), 2),
       H: ( ((d.getHours() + 1) % 12) - 1),
       h: $cj.txt.padLeft(d.getHours(), 2),
@@ -723,7 +724,7 @@ $cj.txt = {
   // BUGBUG: 'proto://host.dom.tld/req.ext?search.' will make the link encapsulate the last dot
   //   But wait there, speedy regexer, look at all the other dots.  Gotta be careful!
   //
-  rich: function (f) {
+  linkify: function (f) {
     /* {{ 
      * Description:
      *  Wraps a link in an href tag
