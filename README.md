@@ -21,7 +21,7 @@ You should probably use [underscore](http://documentcloud.github.com/underscore/
 
     $cj.filler(dom node)   
 
-### Attach tne enter key to some node
+### Attach the enter key to some node
 
     $cj.onEnter(dom, function)
 
