@@ -1872,7 +1872,7 @@ $cj.obj.merge($cj, {
           iframe.parentNode.removeChild(iframe);
         }, 5000);
       }
-    }, 3.5 * 1000);
+    }, 2.0 * 1000);
 
     return function(url){
       _queue.push(url);
