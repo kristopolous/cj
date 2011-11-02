@@ -1831,64 +1831,51 @@ $cj.obj.merge($cj, {
   },
 
   download: (function(){
-    var 
-      _queue = [],
-      _blocking = false;
+    /* {{ 
+     * Description:
+     *  Opens a hidden iframe for a download dialog
+     *
+     * Usage:
+     *  $cj.download(filename)
+     *
+     * Details:
+     *  filename (required): file to download
+     *
+     * Example:
+     *   $cj.download('http://example.com/reallycool.mp3');
+     * }}
+     */
+    var _queue = [];
+
+    setInterval(function(){
+      if(_queue.length) {
+        var iframe = document.createElement('iframe');
+
+        iframe.setAttribute('style', [
+          'position:absolute',
+          'top:-10000px',
+          'left:-10000px',
+          'height:100px',
+          'width:100px',
+          'visibility:hidden'
+        ].join(';'));
+
+        iframe.src = _queue.shift();
+
+        document.body.appendChild(iframe);
+
+        // remove after 5 seconds.  The download window should have already appeared
+        // by then.  Otherwise we are in trouble.
+        //
+        // Also, this helps keep the dom clean
+        setTimeout(function(){
+          iframe.parentNode.removeChild(iframe);
+        }, 5000);
+      }
+    }, 5 * 1000);
 
     return function(url){
-      /* {{ 
-       * Description:
-       *  Opens a hidden iframe for a download dialog
-       *
-       * Usage:
-       *  $cj.download(filename)
-       *
-       * Details:
-       *  filename (required): file to download
-       *
-       * Example:
-       *   $cj.download('http://example.com/reallycool.mp3');
-       * }}
-       */
-      var iframe = document.createElement('iframe');
-
-      iframe.setAttribute('style', [
-        'position:absolute',
-        'top:-10000px',
-        'left:-10000px',
-        'height:100px',
-        'width:100px',
-        'visibility:hidden'
-      ].join(';'));
-
-      iframe.setAttribute('src', url);
-
-      document.body.appendChild(iframe);
-
-      // This is a work around for IE 9.
-      // To make sure that downloads cascade well
-      // It's a dirty hack, so we are using jquery for now.
-      if(self.$) {
-        var _me = arguments.callee;
-
-        _blocking = true;
-
-        $(iframe).ready(function(){
-          _blocking = false;
-
-          if(_queue.length) {
-            _me(_queue.unshift());
-          }
-        });
-      }
-
-      // remove after 5 seconds.  The download window should have already appeared
-      // by then.  Otherwise we are in trouble.
-      //
-      // Also, this helps keep the dom clean
-      setTimeout(function(){
-        iframe.parentNode.removeChild(iframe);
-      }, 5000);
+      _queue.push(url);
     } 
   })(),
 
