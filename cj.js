@@ -7,9 +7,7 @@
  */
 
 // try to avoid polluting the global namespace
-if(! window.$cj) {
-  var $cj = {};
-}
+self.$cj = $cj || {};
 
 $cj.async = {
   callback: function() {
@@ -211,6 +209,7 @@ $cj.async = {
     /* {{ 
      * Description:
      *   A clean way to load additional libraries
+     *   See http://qaa.ath.cx/javascript_loadlib.html
      *
      * Usage:
      *   $cj.lazyLoad (filename, function, options);
@@ -695,17 +694,18 @@ $cj.txt = {
      * 
      * }}
      */
-    var d = new Date(),
-        t = {
-      Y: d.getFullYear(),
-      M: $cj.txt.padLeft((d.getMonth() + 1), 2),
-      N: "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(' ')[d.getMonth()],
-      D: $cj.txt.padLeft(d.getDate(), 2),
-      H: ( ((d.getHours() + 1) % 12) - 1),
-      h: $cj.txt.padLeft(d.getHours(), 2),
-      m: $cj.txt.padLeft(d.getMinutes(), 2),
-      s: $cj.txt.padLeft(d.getSeconds(), 2)
-    }, post = '';
+    var 
+      d = new Date(),
+      t = {
+        Y: d.getFullYear(),
+        M: $cj.txt.padLeft((d.getMonth() + 1), 2),
+        N: "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(' ')[d.getMonth()],
+        D: $cj.txt.padLeft(d.getDate(), 2),
+        H: ( ((d.getHours() + 1) % 12) - 1),
+        h: $cj.txt.padLeft(d.getHours(), 2),
+        m: $cj.txt.padLeft(d.getMinutes(), 2),
+        s: $cj.txt.padLeft(d.getSeconds(), 2)
+      }, post = '';
 
     if(!fmt) {
       fmt = "%Y-%M-%D %h:%m:%s";
@@ -783,12 +783,13 @@ $cj.txt = {
 $cj.list = {
   each: function(list, cb) {
     list = $cj.list.fromString(list);
-    var len = list.length,
-        mythis = {
-          stop: function(){
-            ix = len + 1;
-          }
-        };
+    var 
+      len = list.length,
+      mythis = {
+        stop: function(){
+          ix = len + 1;
+        }
+      };
 
     for(var ix = 0; ix < len; ix++) {
       cb.call(mythis, list[ix], ix);
@@ -871,7 +872,8 @@ $cj.list = {
      *  Self-explanatory 
      * }}
      */
-    var  obj = {},
+    var  
+      obj = {},
       len = list.length;
 
     for(var ix = 0; ix < len; ix++) {
@@ -1274,397 +1276,70 @@ $cj.obj = {
   }
 };
 
-$cj.ev = (function (nameIn) {
-  /* Description:
-   *
-   *   A generic namespace driven event model
-   *  This has some design differences over the
-   *  generic DOM event model that is wrapped by
-   *  Jquery and may be more suited for specific
-   *  purposes.
-   *
-   *  For one thing, using the DOM limits one
-   *  to the native DOM model of say, 
-   *
-   *   * order of function calls 
-   *   * calling convention
-   *   * parameter passing
-   *   * propogation models 
-   *   * handling of return values
-   *   * stack tracing and auditing of functions
-   *   * customizing a context of an instantiation
-   *   * setting prioritization and stack orders
-   *   * avoiding event cycles
-   *   * setting sentinals on number of times called
-   *   * tracking instances and doing counters
-   *   * generalizing a call 
-   *
-   *  For all those reasons and more, a custom event
-   *  model is needed.
-   *
-   * Usage:
-   * (string)  $cj.ev.getName() : get name of namespace
-   * (handle)  $cj.ev.createNS{str) : create a new namespace
-   *
-   * (handle)  $cj.ev.register(ev, func, [opts]) : register a func to be called when ev is fired
-   *     opts:
-   *       ref: reference handle for supression
-   *       last[false]: make last
-   *
-   * (handle)  $cj.ev.registerNS(ns, ev, func) : register a func to be called when ev is fired in namespace ns
-   *
-   * (handle)  $cj.ev.runOnce(ev, func) : run a function for an event one time and deregister it immediately
-   *
-   * (void)    $cj.ev.deregister(handle) : remove the function from the callback
-   *
-   * (mixed)   $cj.ev.fire(ev, ops) : fire an event with a list of options for each function
-   * (mixed)   $cj.ev.fireNS(ev, ops) : fire an event in namespace NS with a list of options for each function
-   *
-   * (handle)  $cj.ev.disable(handle) : temporarily disable a function
-   * (void)    $cj.ev.enable(handle) : enable a previously disabled function
-   *
-   * Other:
-   *   cb : cb object for debugging
-   *   ns : namespace object for debugging
-   *   dump : used in the debugger
-   *
-   * return $cj.ev.STOP to stop propagation
-   *
-   * Details:
-   * Example:
-   * TODO: 
-   *   There needs to be more of an audit trail and record of what is going on here
-   * }}
-   */
-  var   cb = {},
-
-    fList = {},
-    fOnceList = {},
-
-    // whether the event is already raised
-    rChk = {},
-
-    pub = {},
-
-    // namespaces
-    ns = {},
-    name = nameIn || '',
-    mycode = arguments.callee;
-
-  // exposed for various parts of the system
-  pub.cb = cb;
-  pub.ns = ns;
-  pub.fList = fList;
-
-  // fairly implementation 
-  // independent wrapper functions {
-  pub.getName = function () {
-    return name;
-  }
-
-  pub.createNS = function (name) {
-    if(name) {
-      ns[name] = mycode(name);
-      return ns[name];
-    } else {
-      return mycode();
-    }
-  }
-
-  pub.registerNS = function (name, ev, func, opts) {
-    if(ns[name]) {
-      ns[name].register(ev, func, opts);
-    }
-  }
-
-  pub.runOnceNS = function (name, ev, func, opts) {
-    if(ns[name]) {
-      return ns[name].runOnce(ev, func, opts);
-    }
-  }
-
-  pub.fireNS = function (name, ev, data) {
-    if(ns[name]) {
-      return ns[name].fire(ev, data);
-    } 
-  }
-  // }
-
-
-  // registering {
-  pub.register = function (ev, func, opListIn) {
-    var opList = opListIn || {};
-
-    if(!cb.hasOwnProperty(ev)) {
-      cb[ev] = [];
-      rChk[ev] = false;
-    }
-
-    // save this function in the (ns) global list
-    $cj.ev.fHandle++;
-    fList[$cj.ev.fHandle] = func;
-
-    // state that this function is mapped to the event specified
-    $cj.ev.fMap[$cj.ev.fHandle] = [name, ev];
-
-    // add the numeric reference to the 
-    // function to the callback list
-    if(opList.first) {
-      cb[ev].unshift($cj.ev.fHandle);
-    } else {
-      cb[ev].push($cj.ev.fHandle);
-    }
-
-    // cross references for group deregistration
-    if(opList.ref) {
-      if(!$cj.ev.xRefMap.hasOwnProperty(opList.ref)) {
-        $cj.ev.xRefMap[opList.ref] = {e: true, f: [$cj.ev.fHandle]};
-      } else {
-        $cj.ev.xRefMap[opList.ref].f.push($cj.ev.fHandle); 
-      }
-    }
-
-    return $cj.ev.fHandle;
-  }
-
-  pub.runOnce = function (ev, func, opts) {
-    // we actually register this as if it is recurring
-    // and remember the handle
-    var handle = pub.register(ev, func, opts);
-
-    // now we remove it from the map and the list
-    delete $cj.ev.fList[handle];
-    delete $cj.ev.fMap[handle];
-
-    // and add it to the one shot list
-    fOnceList[handle] = func;
-
-    return handle;
-  }
-
-  pub.disable = function (handle) {
-    var ev,
-        ns,
-        my_cb,
-        offset;
-
-    if(typeof handle != 'number') {
-      if($cj.ev.xRefMap[handle] && $cj.ev.xRefMap[handle].e) {
-        
-        var tmp = $cj.ev.xRefMap[handle].f, 
-            len = tmp.length,
-            h;
-
-        for(h = 0; h < len; h++) {
-          arguments.callee(tmp[h]);
-        }
-
-        $cj.ev.xRefMap[handle].e = false;
-      }
-    } else {
-      // get the event that the handle is associated with
-      ns = $cj.ev.fMap[handle][0];
-      ev = $cj.ev.fMap[handle][1];
-
-      if(ns.length) {
-        my_cb = $cj.ev.ns[ns].cb;
-      } else {
-        my_cb = cb;
-      }
-      // find the offset of the function in the event list
-      offset = my_cb[ev].indexOf(handle);
-
-      // remove the function from the event list
-      my_cb[ev].splice(offset, 1);
-
-      // return the function handle 
-      return handle;
-    }
-
-    return false;
-  }
-
-  pub.enable = function (handle) {
-    var ev,
-        ns,
-        my_cb;
-
-    if(typeof handle != 'number') {
-      if($cj.ev.xRefMap[handle] && !$cj.ev.xRefMap[handle].e) {
-
-        var tmp = $cj.ev.xRefMap[handle].f, 
-            len = tmp.length,
-            h;
-
-        for(h = 0; h < len; h++) {
-          arguments.callee(tmp[h]);
-        }
-
-        $cj.ev.xRefMap[handle].e = true;
-      }
-    } else {
-      // Get the event for this handle
-      ns = $cj.ev.fMap[handle][0];
-      ev = $cj.ev.fMap[handle][1];
-
-      if(ns.length) {
-        my_cb = $cj.ev.ns[ns].cb;
-      } else {
-        my_cb = cb;
-      }
-
-      // inject the function back in the list
-      my_cb[ev].push(handle);
-    }
-  };
-
-  pub.deregister = function (handle) {
-    // disable the function to delete it from the event list
-    pub.disable(handle);
-
-    // remove the function from the map and list
-    delete $cj.ev.fMap[handle];
-    delete $cj.ev.fList[handle];
-  }
-
-  // }
-
-  pub.fire = function (ev, data) {
-    var   ix, 
-      handle,
-      removeList = [],
-      ret = [], 
-      tmp;
-
-    // make sure this event is register and not
-    // currently being fired
-    if(cb.hasOwnProperty(ev) && rChk[ev] == false) {
-      rChk[ev] = true;
-
-      for(ix = 0; ix < cb[ev].length; ix++) {
-        // get the numeric handle reference
-        // to the fList
-        handle = cb[ev][ix];
-
-        // see if this is a recurring function
-        // or a one shot function
-
-        // recurring
-        if(fList.hasOwnProperty(handle)) {
-          tmp = fList[handle](data);
-        // one shot function
-        } else if(fOnceList.hasOwnProperty(handle)) {
-          tmp = fOnceList[handle](data);
-
-          // We need to preserve the index of the cb array
-          // throughout the execution.  If we splice it here
-          // then this will drop a function.  So we need to
-          // push the index on to a remove list
-          removeList.push(ix);
-          
-          // we can still delete it from the onceList, despite this
-          delete fOnceList[handle];
-        } else {
-          alert('error firing ' + handle);
-        }
-
-        if(tmp) {
-          if(tmp == $cj.ev.STOP) {
-            break;
-          }
-
-          ret = ret.concat(tmp);
-        }
-      }
-
-      if(removeList.length) {
-        while(removeList.length) {
-          // we need to remove the one shot functions from
-          // the callback list while preserving the index
-          // offsets.  Since they were pushed on to the stack
-          // numerically, then we can pop off the stack and
-          // we'll get the indices to remove in a decreasing order
-
-          cb[ev].splice(removeList.pop(), 1);
-        }
-         
-        if(cb[ev].length == 0) {
-          delete cb[ev];
-        }
-      }
-
-      rChk[ev] = false;
-    }
-
-    return ret;
-  }
-
-  pub.dump = function(args) {
-    var   ev,
-      o = [],
-      lns,
-      tmp;
-
-    function list(ns, name) {
-      o.push(name + ':');
-
-      for(ev in ns.cb) {
-        o.push('[' + ns.cb[ev].join(',') + '] ' + ev);
-      }
-    }
-
-    if(args) {
-      if(args.search(':') > -1) {
-        tmp = args.split(':');
-
-        lns = tmp[0];
-        ev = tmp[1];
-
-        if(!(lns in ns)) {
-          o.push('(0) ' + lns);
-        } else {
-          if(ev.length == 0) {
-            list(ns[lns], lns);
-          } else if(!(ev in ns[lns].cb)) {
-            o.push('(0) ' + lns + ':' + ev);
-          } else {
-            for(tmp in ns[lns].cb[ev]) {
-              o.push('(' + tmp + ') ' + ns[lns].fList[ns[lns].cb[ev][tmp]]);
-            }
-          }
-        }
-      } else {
-        if(!(args in cb)) {
-          o.push('(0) ' + args);
-        }
-
-        for(tmp in cb[args]) {
-          o.push('(' + tmp + ':' + cb[args][tmp] + ') ' + fList[cb[args][tmp]]);
-        }
-      }
-    } else { 
-      list($cj.ev, "$cj.ev");
-
-      for(ev in ns) {
-        list(ns[ev], ev);
-      } 
-    }
-
-    return  o.join('<br>');
-  }
-      
-  return pub;
-})(null);
-// the cross reference for enabling and disabling of functions is a global map
-$cj.ev.xRefMap = {};
-
-$cj.ev.STOP = Math.random();
-
-// as is the function handle counter
-$cj.ev.fHandle = 0;
-
-// and the even cross reference, which stores the namespaces
-$cj.ev.fMap = {};
+// Deprecated. See https://github.com/kristopolous/EvDa
+//  for a better implementation.
+//
+/* Description:
+ *
+ *   A generic namespace driven event model
+ *  This has some design differences over the
+ *  generic DOM event model that is wrapped by
+ *  Jquery and may be more suited for specific
+ *  purposes.
+ *
+ *  For one thing, using the DOM limits one
+ *  to the native DOM model of say, 
+ *
+ *   * order of function calls 
+ *   * calling convention
+ *   * parameter passing
+ *   * propogation models 
+ *   * handling of return values
+ *   * stack tracing and auditing of functions
+ *   * customizing a context of an instantiation
+ *   * setting prioritization and stack orders
+ *   * avoiding event cycles
+ *   * setting sentinals on number of times called
+ *   * tracking instances and doing counters
+ *   * generalizing a call 
+ *
+ *  For all those reasons and more, a custom event
+ *  model is needed.
+ *
+ * Usage:
+ * (string)  $cj.ev.getName() : get name of namespace
+ * (handle)  $cj.ev.createNS{str) : create a new namespace
+ *
+ * (handle)  $cj.ev.register(ev, func, [opts]) : register a func to be called when ev is fired
+ *     opts:
+ *       ref: reference handle for supression
+ *       last[false]: make last
+ *
+ * (handle)  $cj.ev.registerNS(ns, ev, func) : register a func to be called when ev is fired in namespace ns
+ *
+ * (handle)  $cj.ev.runOnce(ev, func) : run a function for an event one time and deregister it immediately
+ *
+ * (void)    $cj.ev.deregister(handle) : remove the function from the callback
+ *
+ * (mixed)   $cj.ev.fire(ev, ops) : fire an event with a list of options for each function
+ * (mixed)   $cj.ev.fireNS(ev, ops) : fire an event in namespace NS with a list of options for each function
+ *
+ * (handle)  $cj.ev.disable(handle) : temporarily disable a function
+ * (void)    $cj.ev.enable(handle) : enable a previously disabled function
+ *
+ * Other:
+ *   cb : cb object for debugging
+ *   ns : namespace object for debugging
+ *   dump : used in the debugger
+ *
+ * return $cj.ev.STOP to stop propagation
+ *
+ * Details:
+ * Example:
+ * TODO: 
+ *   There needs to be more of an audit trail and record of what is going on here
+ * }}
+ */
 
 $cj.obj.merge($cj, {
   create: function(opts) {
@@ -1864,13 +1539,13 @@ $cj.obj.merge($cj, {
 
         document.body.appendChild(iframe);
 
-        // remove after 5 seconds.  The download window should have already appeared
+        // remove after 20 seconds.  The download window should have already appeared
         // by then.  Otherwise we are in trouble.
         //
         // Also, this helps keep the dom clean
         setTimeout(function(){
           iframe.parentNode.removeChild(iframe);
-        }, 5000);
+        }, 20 * 1000);
       }
     }, 2.0 * 1000);
 
