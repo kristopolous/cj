@@ -7,7 +7,7 @@
  */
 
 // try to avoid polluting the global namespace
-self.$cj = $cj || {};
+self.$cj = self.$cj || {};
 
 $cj.async = {
   callback: function() {
